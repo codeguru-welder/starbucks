@@ -1,0 +1,371 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper SYSTEM "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="mySvc">
+
+	<!-- 사용자 정보 조회 -->
+	<select id="selectUserInfo" parameterType="String" resultType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo">
+           
+           SELECT CPTTR_ID,
+               CPTTR_NM,
+               CPTTR_SEX_CD,
+               CVPL_REQUST_GUIDANCE_NO,
+               CVPL_REQUST_DH,
+               CASE
+                  WHEN SUBSTR(CVPL_REQUST_DH,0,8) != TO_CHAR(SYSDATE,'YYYYMMDD')
+                  THEN TO_CHAR ( TO_DATE ( CVPL_REQUST_DH, 'YYYYMMDDHH24MISS' ),'YYYY"년 "MM"월 "DD"일"' )
+                  ELSE '오늘'
+               END AS UPDATE_TIME,
+               CASE WHEN SUBSTR(CVPL_REQUST_DH,0,8) = TO_CHAR(SYSDATE,'YYYYMMDD') AND REQUST_RSLT_CD = 'ZZ2701' THEN 'N' ELSE 'Y' END AS UPDATE_PSB_YN
+          FROM TN_CPTTR T1,
+               (select cpttr_seq, CVPL_REQUST_DH, CVPL_REQUST_GUIDANCE_NO, REQUST_RSLT_CD
+		from
+		 ( SELECT CPTTR_SEQ,
+                  CVPL_REQUST_DH,
+                  CVPL_REQUST_GUIDANCE_NO,
+                  REQUST_RSLT_CD
+                    FROM TN_CVPL_REQUST_INFO
+                   WHERE CPTTR_SEQ = (SELECT CPTTR_SEQ
+                                        FROM TN_CPTTR
+                                       WHERE CPTTR_ID =  #{usrId} )
+                     AND CVPL_REQUST_STTUS_CD = 'YC0104'
+                     AND CVPL_REQUST_CLS_CD ='BB0402'
+                     AND REQUST_RSLT_CD IN ('ZZ2701', 'ZZ2702', 'ZZ2703')
+                     order by cvpl_requst_dh desc
+                )    where rownum=1 ) T2
+         WHERE T1.CPTTR_SEQ = T2.CPTTR_SEQ(+)
+           AND CPTTR_ID =  #{usrId}
+    </select>
+
+	<!-- 민원요청번호 -->
+	<select id="selectMaxGuidanceNo" resultType="String">		
+		SELECT 
+			TO_CHAR(SYSDATE, 'YYMMDD')|| '-' || LPAD(SQ_CVPL_REQUST_GUIDANCE_NO.nextval,9,'0') 
+		FROM DUAL
+	</select>
+
+	<!-- 민원 요청 등록 -->
+    <insert id="insertRcvfvrGuidanceCvplRequst" parameterType="HashMap">
+        INSERT
+          INTO TN_CVPL_REQUST_INFO (
+               CPTTR_SEQ
+              ,CVPL_REQUST_DH
+              ,CVPL_REQUST_GUIDANCE_NO
+              ,SMS_RCV_AGRE_YN
+              ,CVPL_REQUST_STTUS_CD
+              ,INDVDL_INFO_AGRE_YN
+              ,CPTTR_EMAIL
+              ,MNDT_REQUST_YN
+              ,CVPL_REQUST_CLS_CD
+              ,MOBILE_REQST_YN
+             ) VALUES (
+               (SELECT CPTTR_SEQ FROM TN_CPTTR WHERE CPTTR_ID = #{cpttrId})
+              ,TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+              ,#{cvplRequstGuidanceNo}
+              ,'N'
+              ,'YC0104'
+              ,'Y'
+              ,(SELECT EMAIL FROM TN_CPTTR WHERE CPTTR_ID = #{cpttrId})
+              ,'N'
+              ,'BB0402'
+              ,#{mobileYn}
+              )
+    </insert>
+
+	<!-- 민원 요청 등록 -->
+    <insert id="insertRcvfvrGuidanceCvplVrifyRequst" parameterType="HashMap">
+        INSERT
+          INTO TN_CVPL_REQUST_INFO (
+               CPTTR_SEQ
+              ,CVPL_REQUST_DH
+              ,CVPL_REQUST_GUIDANCE_NO
+              ,SMS_RCV_AGRE_YN
+              ,CVPL_REQUST_STTUS_CD
+              ,INDVDL_INFO_AGRE_YN
+              ,CPTTR_EMAIL
+              ,MNDT_REQUST_YN
+              ,CVPL_REQUST_CLS_CD
+             ) VALUES (
+               #{cpttrSeq}
+              ,TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+              ,#{cvplRequstGuidanceNo}
+              ,'N'
+              ,'YC0104'
+              ,'Y'
+              ,#{email}
+              ,'N'
+              ,'BB0402'
+              )
+    </insert>
+
+	<!-- 수혜서비스 결과(분류)-->
+	<select id="selectRcvfvrSvcRsltVw1" parameterType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo" resultType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo">
+		SELECT (SELECT COUNT (GUIDANCE_CLS_CD) AS RSLT_CNT FROM TN_SVC_GUIDANCE_REQST_RSLT WHERE CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo}) AS RSLT_CNT,
+			   (SELECT COUNT (GUIDANCE_CLS_CD) AS RSLT_CNT FROM TN_SVC_GUIDANCE_REQST_RSLT WHERE CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo} AND GUIDANCE_CLS_CD = 'ZZ2501') AS RSLT_CNT1,
+		       (SELECT COUNT (GUIDANCE_CLS_CD) AS RSLT_CNT FROM TN_SVC_GUIDANCE_REQST_RSLT WHERE CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo} AND GUIDANCE_CLS_CD = 'ZZ2502') AS RSLT_CNT2,
+		       (SELECT COUNT (GUIDANCE_CLS_CD) AS RSLT_CNT FROM TN_SVC_GUIDANCE_REQST_RSLT WHERE CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo} AND GUIDANCE_CLS_CD = 'ZZ2503') AS RSLT_CNT3,
+		       (SELECT COUNT (GUIDANCE_CLS_CD) AS RSLT_CNT FROM TN_SVC_GUIDANCE_REQST_RSLT WHERE CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo} AND GUIDANCE_CLS_CD = 'ZZ2504') AS RSLT_CNT4
+		  FROM DUAL
+	</select>
+
+	<!-- 수혜서비스 결과(목록)-->
+	<select id="selectRcvfvrSvcRsltVw2" parameterType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo" resultType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo">
+	<![CDATA[
+		SELECT *
+		  FROM (  SELECT S.SVC_ID,
+		                 S.SVC_SEQ,
+		                 S.SVC_NM,
+		                 (SELECT F.ORG_NM  FROM TM_ADM_STD_ORG F WHERE F.ORG_CD = (SELECT ADM.RP_ORG_CD  FROM TM_ADM_STD_ORG ADM WHERE ADM.ORG_CD = S.JRSD_ORG_CD)) AS JRSD_ORG_NM,
+		                 (SELECT ORG_NM FROM TM_ADM_STD_ORG WHERE ORG_CD = S.JRSD_ORG_CD) AS JRSD_DPT_NM,
+		                 (SELECT T.ORG_NM FROM TM_ADM_STD_ORG T WHERE T.ORG_CD = (SELECT ORG.FS_ORG_CD FROM TM_ADM_STD_ORG ORG WHERE ORG.ORG_CD = S.JRSD_ORG_CD)) AS JRSD_FS_ORG_NM,
+		                 S.JRSD_ORG_CD,
+		                 S.JRSD_ORG_CLS_CD,
+                         DECODE(FIXES_GUIDANCE_YN, 'Y', SVC_CTS_SUMRY, SVC_PPO) AS SVC_PPO,
+		                 S.REQST_TMLMT_ETC,
+		                 (SELECT REGEXP_REPLACE ( REGEXP_REPLACE ( REGEXP_REPLACE ( REGEXP_REPLACE ( LISTAGG (SPORT_FR_CD, ',') WITHIN GROUP (ORDER BY SPORT_FR_CD),
+		                                     'BA0602|BA0603|BA0604|BA0605', 'BA0601'), 'BA0609|BA0610|BA0611', 'BA0608'), 'BA0612|BA0613', 'BA0614'), '([^,]+)(,\1)+', '\1')
+		                    FROM TN_SPORT_FR WHERE SVC_SEQ = S.SVC_SEQ) AS SPORT_FR_CD_ARR,
+		                 (SELECT LISTAGG (REQST_MEAN_CD, ',') WITHIN GROUP (ORDER BY REQST_MEAN_CD) FROM TN_SVC_REQST_MEAN WHERE SVC_SEQ = S.SVC_SEQ) AS REQST_MEAN_CD_ARR,
+                         DECODE (V.PROVD_SVC_VW_CNT, NULL, 0, V.PROVD_SVC_VW_CNT) AS PROVD_SVC_VW_CNT,
+		                 R.RSLT_NM,
+		                 R.RSLT_ORDER,
+		                 R.GUIDANCE_CLS_CD,
+		                 DECODE(RCV_ORG_CLS_CD, 'BA2102', RCV_ORG_NM,'BA2101',(SELECT ORG_NM FROM TM_ADM_STD_ORG A WHERE A.ORG_CD = RCV_ORG_CD), (SELECT CD_NM FROM TC_CD WHERE CD=RCV_ORG_CLS_CD)) AS RCV_ORG_NM,
+		                 REFRNC_TEL_NO,
+		                 REFRNC_NM,
+		                 (SELECT LISTAGG (CAST(REFRNC_NM AS VARCHAR(100)), ', ') WITHIN GROUP (ORDER BY REFRNC_SEQ) FROM TN_SVC_REFRNC WHERE SVC_SEQ=S.SVC_SEQ) AS REFRNC_NM_ARR,
+                         (SELECT LISTAGG (CAST(REFRNC_NM AS VARCHAR(100)) || '/ '||REFRNC_TEL_NO, ',') WITHIN GROUP (ORDER BY REFRNC_SEQ) FROM TN_SVC_REFRNC WHERE SVC_SEQ=S.SVC_SEQ) AS REFRNC_ARR
+		            FROM TN_SVC S,
+		                 (SELECT SVC_SEQ,
+		                         GUIDANCE_CLS_CD,
+		                         CASE WHEN CPTTR_SEQ IS NOT NULL THEN 0 WHEN AGREUSR_SEQ IS NOT NULL THEN AGREUSR_SEQ END AS RSLT_ORDER,
+		                         CASE
+		                         WHEN CPTTR_SEQ IS NOT NULL THEN (SELECT CPTTR_NM FROM TN_CPTTR ST2 WHERE ST2.CPTTR_SEQ = ST1.CPTTR_SEQ)
+		                         WHEN AGREUSR_SEQ IS NOT NULL THEN (SELECT AGREUSR_NM  FROM TN_CPTTR_AGREMANAGE ST3 WHERE ST3.AGREUSR_SEQ = ST1.AGREUSR_SEQ)
+		                         END AS RSLT_NM,
+		                         EPRSS_RNK
+		                    FROM TN_SVC_GUIDANCE_REQST_RSLT ST1
+		                   WHERE CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo}) R,
+		                   (SELECT PROVD_SVC_VW_CNT, SVC_ID FROM TN_SVC_VW_CNT WHERE VW_SYS_CD = 'ZZ1201') V
+		           WHERE     S.SVC_SEQ = R.SVC_SEQ
+                         AND S.SVC_ID = V.SVC_ID(+)
+		        ORDER BY RSLT_ORDER, GUIDANCE_CLS_CD, EPRSS_RNK, SVC_NM)
+		]]>
+	</select>
+
+	<!-- 민원인 일련번호 조회 -->
+	<select id="selectCpttrSeqVw" parameterType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo" resultType="String">
+		SELECT CPTTR_SEQ
+		  FROM TN_CPTTR
+		 WHERE IHIDNUM_SIMPLX = #{ihidnumSimplx}
+	</select>
+
+	<!-- 민원인 일련번호 생성 조회 -->
+	<select id="selectCpttrSeqPrdtVw" parameterType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo" resultType="String">
+		SELECT SQ_CPTTR_SEQ.NEXTVAL FROM DUAL
+	</select>
+
+	<!-- 민원인 정보 저장 -->
+	<insert id="insertCpttrInfoSav" parameterType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo">
+		INSERT INTO TN_CPTTR (CPTTR_SEQ,
+		                      CPTTR_NM,
+		                      CPTTR_BRTHDY,
+		                      CPTTR_SEX_CD,
+		                      IHIDNUM_SIMPLX,
+		                      IHIDNUM_BDRCL,
+		                      BIZRNO,
+		                      CPTTR_DTL_ADDR,
+		                      MOBILE_NO,
+		                      EMAIL,
+		                      TEL_NO,
+		                      CPTTR_ID)
+		     VALUES (#{cpttrSeq},
+		             #{cpttrNm},
+		             #{cpttrBrthdy},
+		             #{cpttrSexCd},
+		             #{ihidnumSimplx},
+		             #{ihidnumBdrcl},
+		             #{bizrno},
+		             #{cpttrDtlAddr},
+		             #{mobileNo},
+		             #{email},
+		             #{telNo},
+		             #{cpttrId})
+	</insert>
+
+	<!-- 민원인 정보 수정 -->
+	<update id="updateCpttrInfoSav" parameterType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo">
+		UPDATE TN_CPTTR
+		SET    CPTTR_NM		  = #{cpttrNm},
+			   BIZRNO         = #{bizrno},
+			   IHIDNUM_BDRCL  = #{ihidnumBdrcl},
+		       CPTTR_DTL_ADDR = #{cpttrDtlAddr},
+		       MOBILE_NO      = #{mobileNo},
+		       EMAIL          = #{email},
+		       TEL_NO         = #{telNo},
+		       CPTTR_ID       = #{cpttrId}
+		WHERE  CPTTR_SEQ      = #{cpttrSeq}
+	</update>
+	
+	
+	<!-- 연계 상태 확인 -->
+	<select id="selectLnkSttus"  parameterType="String" resultType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo">
+	<![CDATA[
+		SELECT 
+            TROBL_GUIDANCE_CTS,
+            EPRSS_ST_DH, 
+            EPRSS_ED_DH
+        FROM 
+            TN_SYS_TROBL_MANAGE 
+        WHERE 
+            SYS_CLS_CD = 'ZZ2801'
+            AND SYS_TROBL_YN = 'Y'
+            AND NTC_CLS_CD = #{ntcClsCd}
+            AND TO_DATE (EPRSS_ST_DH, 'YYYYMMDDHH24MISS') <= SYSDATE
+         AND TO_DATE (EPRSS_ED_DH, 'YYYYMMDDHH24MISS') >= SYSDATE
+	]]>
+	</select>
+	
+	<!-- 요청번호 별 연계 장애 안내 -->
+	<select id="selectErrList" parameterType="String" resultType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo">
+		SELECT 
+			LISTAGG (CAST(ORG_NM AS VARCHAR(100)), ', ') WITHIN GROUP (ORDER BY ORG_NM) AS LNK_SVC_NM
+		FROM 
+			(SELECT 
+				DISTINCT (SELECT ORG_NM
+		                  FROM TM_ADM_STD_ORG C
+		                  WHERE C.ORG_CD = B.HOLD_ORG_CD) AS ORG_NM
+			FROM 
+				(SELECT 
+					LNK_ID
+		          FROM TN_QUALF_RECIPT_INFO_REQUST
+		          WHERE 
+		          	CVPL_REQUST_GUIDANCE_NO = #{cvplRequstNo}
+		            AND REQUST_SUCC_YN = 'N') A,
+		               TN_QUALF_INFO_LNK_INFO B
+		         WHERE A.LNK_ID = B.LNK_ID)
+	</select>
+	
+	<!-- 보조금24 화면 접속 이력 등록 -->
+    <insert id="insertUrl" parameterType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo">
+        INSERT INTO TN_ONLN_PG_CONECT_LOG (
+	           PG_CONECT_SEQ
+	          ,CPTTR_ID
+	          ,PG_URL
+	          ,PG_CONECT_DH
+	          ,LOGIN_CLS_NM
+	          ,CONECT_IP
+         ) VALUES (
+	           SQ_PG_CONECT_SEQ.NEXTVAL
+	          ,#{userId}
+	          ,#{pgUrl}
+	          ,TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+	          ,#{loginClsNm}
+	          ,#{remoteIp}
+          )
+    </insert>
+    
+    <!-- 접속제어 최대 건수 조회-->
+	<select id="selectRemoteMaxCnt" parameterType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo" resultType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo">
+		SELECT MAX(CONECTR_CNT) REMOTE_MAX_CNT
+		  FROM TN_SYS_CONECTR_MANAGE
+		  WHERE USE_YN = 'Y'
+		  AND SYS_CLS_CD = 'ZZ2801'
+		  AND TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') BETWEEN CONECT_ST_DH AND CONECT_ED_DH
+	</select>
+	
+	<!-- 맞춤혜택 서비스 305종 -->
+	<select id="selectFixesSvc" parameterType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo" resultType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo">
+		<![CDATA[
+		SELECT 
+            * 
+        FROM 
+            (SELECT 
+                SVC_SEQ, 
+                SVC_NM_INITIAL,
+                SVC_ID, 
+                NVL(SVC_NM,1) AS SVC_NM, 
+                REQ_DT 
+            FROM (
+                SELECT 
+                    SVC.SVC_ID,
+                    SVC_SEQ,
+                    SVC_NM,
+                   CASE WHEN NOT REGEXP_LIKE(SUBSTR(SVC_NM,1,1), '[가-힝]') THEN ''
+                        WHEN SUBSTR(SVC_NM,1,1)<= NCHR(45207) THEN 'ㄱ'
+                        WHEN SUBSTR(SVC_NM,1,1)<= NCHR(45795) THEN 'ㄴ'
+                        WHEN SUBSTR(SVC_NM,1,1)<= NCHR(46971) THEN 'ㄷ'
+                        WHEN SUBSTR(SVC_NM,1,1)<= NCHR(47559) THEN 'ㄹ'
+                        WHEN SUBSTR(SVC_NM,1,1)<= NCHR(48147) THEN 'ㅁ'
+                        WHEN SUBSTR(SVC_NM,1,1)<= NCHR(49323) THEN 'ㅂ'
+                        WHEN SUBSTR(SVC_NM,1,1)<= NCHR(50499) THEN 'ㅅ'
+                        WHEN SUBSTR(SVC_NM,1,1)<= NCHR(51087) THEN 'ㅇ'
+                        WHEN SUBSTR(SVC_NM,1,1)<= NCHR(52263) THEN 'ㅈ'
+                        WHEN SUBSTR(SVC_NM,1,1)<= NCHR(52851) THEN 'ㅊ'
+                        WHEN SUBSTR(SVC_NM,1,1)<= NCHR(53439) THEN 'ㅋ'
+                        WHEN SUBSTR(SVC_NM,1,1)<= NCHR(54027) THEN 'ㅌ'
+                        WHEN SUBSTR(SVC_NM,1,1)<= NCHR(54615) THEN 'ㅍ'
+                        WHEN SUBSTR(SVC_NM,1,1)<= NCHR(55203) THEN 'ㅎ'
+                   END AS SVC_NM_INITIAL,
+                   REQ_DT
+                FROM (
+                    SELECT SVC_ID AS REQ_DT
+                    FROM TN_QUALF_INFO_LNK_INFO A, 
+                         TN_QUALF_LNK_META_INFO B
+                    WHERE A.LNK_ID=B.LNK_ID 
+                      AND SVC_ID IS NOT NULL 
+                      AND A.USE_YN = 'Y' 
+                      AND B.USE_YN='Y'
+                    ORDER BY 1) A, 
+                    TN_SVC SVC
+                WHERE 
+                    A.REQ_DT(+) = SVC.SVC_ID
+                    AND EPRSS_YN = 'Y'
+                    AND DEL_YN='N' 
+                    AND FIXES_GUIDANCE_YN='Y'
+                    AND SVC_STTUS_CD = 'YA0105'
+                ORDER BY 
+                    SVC_NM_INITIAL, SVC_NM) 
+            GROUP BY ROLLUP(SVC_NM_INITIAL,(SVC_SEQ, SVC_NM, SVC_ID, REQ_DT)) 
+            ORDER BY SVC_NM_INITIAL, SVC_NM) 
+            WHERE SVC_NM <> '1' OR SVC_NM_INITIAL IS NOT NULL
+        ORDER BY SVC_NM_INITIAL, SVC_NM ]]>
+	</select>
+	
+	<!-- 온라인 신청 -->
+	<select id="selectReqstSvc" parameterType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo" resultType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo">
+		<![CDATA[
+		SELECT * FROM (SELECT SVC_SEQ, SVC_ID, NVL(SVC_NM,1) AS SVC_NM, SVC_NM_INITIAL FROM (
+			SELECT 
+			    SVC.SVC_SEQ,
+			    SVC.SVC_ID,
+			    SVC.SVC_NM,
+			    CASE WHEN NOT REGEXP_LIKE(SUBSTR(SVC.SVC_NM,1,1), '[가-힝]') THEN ''
+			         WHEN SUBSTR(SVC.SVC_NM,1,1)<= NCHR(45207) THEN 'ㄱ'
+			         WHEN SUBSTR(SVC.SVC_NM,1,1)<= NCHR(45795) THEN 'ㄴ'
+			         WHEN SUBSTR(SVC.SVC_NM,1,1)<= NCHR(46971) THEN 'ㄷ'
+			         WHEN SUBSTR(SVC.SVC_NM,1,1)<= NCHR(47559) THEN 'ㄹ'
+			         WHEN SUBSTR(SVC.SVC_NM,1,1)<= NCHR(48147) THEN 'ㅁ'
+			         WHEN SUBSTR(SVC.SVC_NM,1,1)<= NCHR(49323) THEN 'ㅂ'
+			         WHEN SUBSTR(SVC.SVC_NM,1,1)<= NCHR(50499) THEN 'ㅅ'
+			         WHEN SUBSTR(SVC.SVC_NM,1,1)<= NCHR(51087) THEN 'ㅇ'
+			         WHEN SUBSTR(SVC.SVC_NM,1,1)<= NCHR(52263) THEN 'ㅈ'
+			         WHEN SUBSTR(SVC.SVC_NM,1,1)<= NCHR(52851) THEN 'ㅊ'
+			         WHEN SUBSTR(SVC.SVC_NM,1,1)<= NCHR(53439) THEN 'ㅋ'
+			         WHEN SUBSTR(SVC.SVC_NM,1,1)<= NCHR(54027) THEN 'ㅌ'
+			         WHEN SUBSTR(SVC.SVC_NM,1,1)<= NCHR(54615) THEN 'ㅍ'
+			         WHEN SUBSTR(SVC.SVC_NM,1,1)<= NCHR(55203) THEN 'ㅎ'
+			    END AS SVC_NM_INITIAL
+			FROM 
+			    TN_SVC SVC, 
+			    TN_SVC_REQST_MEAN MEAN
+			WHERE 
+			    SVC.SVC_SEQ = MEAN.SVC_SEQ 
+			    AND MEAN.REQST_MEAN_CD = 'BF0101'
+			    AND DEL_YN = 'N'
+			    AND EPRSS_YN = 'Y'
+			    AND SVC_STTUS_CD = 'YA0105'
+			ORDER BY SVC_NM_INITIAL, SVC_NM) GROUP BY ROLLUP(SVC_NM_INITIAL,(SVC_SEQ, SVC_NM, SVC_ID))) 
+			WHERE SVC_NM <> '1' OR SVC_NM_INITIAL IS NOT NULL
+			ORDER BY SVC_NM_INITIAL, SVC_NM ]]>
+	</select>
+</mapper>

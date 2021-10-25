@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://java.sun.com/xml/ns/javaee"
+    xmlns:jsp="http://java.sun.com/xml/ns/javaee/jsp" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+    id="WebApp_ID" version="2.5">
+    <display-name>kr.go.ogv</display-name>
+    <distributable />
+
+    <!-- SSC MetaSession -->
+    <filter>
+      <filter-name>SscFilter</filter-name>
+      <filter-class>ssc.service.session.SscHttpFilter</filter-class>
+    </filter>
+    
+    <filter-mapping>
+      <filter-name>SscFilter</filter-name>
+      <url-pattern>*</url-pattern>
+      <dispatcher>REQUEST</dispatcher>
+    </filter-mapping>
+
+    
+    <listener>
+      <listener-class>ssc.fundamental.SscStartUp</listener-class>
+    </listener>
+    
+    <listener>
+      <listener-class>ssc.service.session.SscListener</listener-class>
+    </listener>
+    
+    
+    <servlet>
+      <servlet-name>SscServlet</servlet-name>
+      <servlet-class>ssc.service.session.SscServlet</servlet-class>
+      <init-param>
+        <param-name>enabledForExtensions</param-name>
+        <param-value>true</param-value>
+      </init-param>
+      <load-on-startup>1</load-on-startup>
+    </servlet>
+    
+    <servlet-mapping>
+      <servlet-name>SscServlet</servlet-name>
+      <url-pattern>/SscServlet</url-pattern>
+    </servlet-mapping>
+
+    
+    <filter>
+        <filter-name>encodingFilter</filter-name>
+        <filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+        <init-param>
+            <param-name>encoding</param-name>
+            <param-value>utf-8</param-value>
+        </init-param>
+    </filter>
+    
+    <filter-mapping>
+        <filter-name>encodingFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+    
+    <filter>
+        <filter-name>springSecurityFilterChain</filter-name>
+        <filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+    </filter>
+    
+    <filter-mapping>
+        <filter-name>springSecurityFilterChain</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+    
+    <filter>
+        <filter-name>multipartFilter</filter-name>
+        <filter-class>org.springframework.web.multipart.support.MultipartFilter</filter-class>
+        <init-param>
+            <param-name>multipartResolverBeanName</param-name>
+            <param-value>multipartResolver</param-value>
+        </init-param>
+    </filter>
+    
+    <filter-mapping>
+        <filter-name>multipartFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+    <context-param>
+        <param-name>contextConfigLocation</param-name>
+        <param-value>
+            classpath*:egovframework/spring/context-*.xml
+        </param-value>
+    </context-param>
+    
+    
+    <listener>
+        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+    </listener>
+    
+    <servlet>
+        <servlet-name>action</servlet-name>
+        <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+        <init-param>
+            <param-name>contextConfigLocation</param-name>
+            <param-value>
+                /WEB-INF/config/egovframework/springmvc/dispatcher-servlet.xml
+            </param-value>
+        </init-param>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
+    
+    <servlet-mapping>
+        <servlet-name>action</servlet-name>
+        <url-pattern>/</url-pattern>
+    </servlet-mapping>
+    
+    <!-- 키보드 보안 서블릿 -->
+    <servlet>
+        <servlet-name>transkeyServlet</servlet-name>
+        <servlet-class>com.raonsecure.transkey.servlet.TranskeyServlet</servlet-class>
+        <init-param>
+            <param-name>iniFilePath</param-name>
+            <param-value>/WEB-INF/TouchEnCert/config.ini</param-value>
+        </init-param>
+        <init-param>
+            <param-name>privateKey</param-name>
+            <param-value>/WEB-INF/TouchEnCert/Private2048.key.der</param-value>
+        </init-param>
+        <load-on-startup>2</load-on-startup>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>transkeyServlet</servlet-name>
+        <url-pattern>/portal/transkeyServlet</url-pattern>
+    </servlet-mapping>
+    
+    <welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+    </welcome-file-list>
+
+    <error-page>
+        <error-code>404</error-code>
+        <location>/WEB-INF/jsp/common/error/pageNotFound.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>400</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>401</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>402</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>403</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>405</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>406</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>407</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>408</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>409</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>410</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>411</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>412</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>413</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>414</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>415</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>416</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>417</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>500</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>501</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>502</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>503</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>504</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>505</error-code>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <exception-type>java.lang.NullPointerException</exception-type>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+    </error-page>
+    <error-page>
+        <exception-type>org.springframework.social.MissingAuthorizationException</exception-type>
+        <location>/WEB-INF/jsp/common/error/error.jsp</location>
+        <!-- <location>/WEB-INF/jsp/common/redirect/main.jsp</location> -->
+    </error-page>
+        
+    <jsp-config>
+        <jsp-property-group>
+            <url-pattern>*.jsp</url-pattern>
+            <page-encoding>UTF-8</page-encoding>
+            <include-prelude>/WEB-INF/jsp/common/base.jspf</include-prelude>
+        </jsp-property-group>
+    </jsp-config>
+    
+    <session-config>
+        <session-timeout>30</session-timeout>
+    </session-config>
+</web-app>

@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper SYSTEM "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tnQualfInfoLnkInfo">
+
+	<!-- 자격 정보 연계 정보 리스트 -->
+	<select id="selectTnQualfInfoLnkInfoList" resultType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfInfoLnkInfoVo">
+	<![CDATA[
+		SELECT
+             A.REQUSTURL
+            ,A.USE_IMPRTY_RESN
+            ,A.USE_YN
+            ,A.REGR_SEQ
+            ,A.REG_DH
+            ,A.MODR_SEQ
+            ,A.MOD_DH
+            ,A.LNK_ID
+            ,A.LNK_SVC_NM
+            ,A.LNK_SVC_EPL
+            ,A.HOLD_ORG_CD
+            ,A.HOLD_ORG_DPT_NM
+            ,A.HOLD_ORG_CHARGER_NM
+            ,A.HOLD_ORG_TEL_NO
+            ,A.HOLD_ORG_EMAIL
+        FROM TN_QUALF_INFO_LNK_INFO a, TN_USR_CLSACCTO_LNK_INFO b
+		 WHERE     a.LNK_ID = b.LNK_ID
+		       AND A.USE_YN = 'Y'
+		       AND b.use_YN = 'Y'
+		       AND b.USR_SEX_CD = #{usrSexCd}
+		       AND A.LNK_ID NOT IN ('I-IF-MPVA-005', 'I-IF-SCOURT-001', 'I-IF-MOIS-007')  /*I-IF-MPVA-005 이거는 연계후 보훈처에 다시 보내야 되는 내용이 있을경우에만 따로 보냄.*/
+		       AND b.USR_AGE_CD =
+		              (SELECT CASE
+		                         WHEN MANAGE < 10 THEN 'DA1301'
+		                         WHEN MANAGE < 20 THEN 'DA1302'
+		                         WHEN MANAGE < 30 THEN 'DA1303'
+		                         WHEN MANAGE < 40 THEN 'DA1304'
+		                         WHEN MANAGE < 50 THEN 'DA1305'
+		                         WHEN MANAGE < 60 THEN 'DA1306'
+		                         ELSE 'DA1307'
+		                      END
+		                         AS AGECODE
+		                 FROM (SELECT TRUNC (MONTHS_BETWEEN (TRUNC(SYSDATE), TO_DATE (#{cpttrBrthdy}, 'yyyymmdd'))/ 12) MANAGE FROM DUAL))
+	]]>
+	</select>
+	
+
+	<select id="selectTnQualfInfoLnkInfoListAll" resultType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfInfoLnkInfoVo">
+		SELECT
+			REQUSTURL
+			,USE_IMPRTY_RESN
+			,USE_YN
+			,REGR_SEQ
+			,REG_DH
+			,MODR_SEQ
+			,MOD_DH
+			,LNK_ID
+			,LNK_SVC_NM
+			,LNK_SVC_EPL
+			,HOLD_ORG_CD
+			,HOLD_ORG_DPT_NM
+			,HOLD_ORG_CHARGER_NM
+			,HOLD_ORG_TEL_NO
+			,HOLD_ORG_EMAIL
+		FROM	TN_QUALF_INFO_LNK_INFO
+		WHERE 1=1
+		AND USE_YN = 'Y'
+	</select>
+
+	<!-- 자격 정보 연계 정보 상세 뷰 -->
+	<select id="selectTnQualfInfoLnkInfo" resultType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfInfoLnkInfoVo">
+		SELECT
+			REQUSTURL
+			,USE_IMPRTY_RESN
+			,USE_YN
+			,REGR_SEQ
+			,REG_DH
+			,MODR_SEQ
+			,MOD_DH
+			,LNK_ID
+			,LNK_SVC_NM
+			,LNK_SVC_EPL
+			,HOLD_ORG_CD
+			,HOLD_ORG_DPT_NM
+			,HOLD_ORG_CHARGER_NM
+			,HOLD_ORG_TEL_NO
+			,HOLD_ORG_EMAIL
+		FROM	TN_QUALF_INFO_LNK_INFO
+		WHERE 1=1
+	</select>
+
+	<!-- 자격 정보 연계 정보 등록 -->
+	<insert id="insertTnQualfInfoLnkInfo" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfInfoLnkInfoVo">
+		INSERT INTO TN_QUALF_INFO_LNK_INFO (
+			REQUSTURL
+			,USE_IMPRTY_RESN
+			,USE_YN
+			,REGR_SEQ
+			,REG_DH
+			,MODR_SEQ
+			,MOD_DH
+			,LNK_ID
+			,LNK_SVC_NM
+			,LNK_SVC_EPL
+			,HOLD_ORG_CD
+			,HOLD_ORG_DPT_NM
+			,HOLD_ORG_CHARGER_NM
+			,HOLD_ORG_TEL_NO
+			,HOLD_ORG_EMAIL
+		) VALUES (
+			#{requsturl}
+			,#{useImprtyResn}
+			,#{useYn}
+			,#{regrSeq}
+			,#{regDh}
+			,#{modrSeq}
+			,#{modDh}
+			,#{lnkId}
+			,#{lnkSvcNm}
+			,#{lnkSvcEpl}
+			,#{holdOrgCd}
+			,#{holdOrgDptNm}
+			,#{holdOrgChargerNm}
+			,#{holdOrgTelNo}
+			,#{holdOrgEmail}
+ 		)
+	</insert>
+
+	<!-- 자격 정보 연계 정보 수정 -->
+	<update id="updateTnQualfInfoLnkInfo" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfInfoLnkInfoVo">
+		UPDATE TN_QUALF_INFO_LNK_INFO SET
+			REQUSTURL = #{requsturl}
+			,USE_IMPRTY_RESN = #{useImprtyResn}
+			,USE_YN = #{useYn}
+			,REGR_SEQ = #{regrSeq}
+			,REG_DH = #{regDh}
+			,MODR_SEQ = #{modrSeq}
+			,MOD_DH = #{modDh}
+			,LNK_ID = #{lnkId}
+			,LNK_SVC_NM = #{lnkSvcNm}
+			,LNK_SVC_EPL = #{lnkSvcEpl}
+			,HOLD_ORG_CD = #{holdOrgCd}
+			,HOLD_ORG_DPT_NM = #{holdOrgDptNm}
+			,HOLD_ORG_CHARGER_NM = #{holdOrgChargerNm}
+			,HOLD_ORG_TEL_NO = #{holdOrgTelNo}
+			,HOLD_ORG_EMAIL = #{holdOrgEmail}
+ 		WHERE 1=1
+	</update>
+
+</mapper>

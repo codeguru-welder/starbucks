@@ -1,0 +1,418 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper SYSTEM "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="rcvfvrGuidanceCvplRequst">
+
+	<!-- 민원요청번호 5자리에서 6자리로 -->
+	<select id="selectMaxGuidanceNo" resultType="String">
+		SELECT 
+			TO_CHAR(SYSDATE, 'YYMMDD')|| '-' || LPAD(SQ_CVPL_REQUST_GUIDANCE_NO.nextval,9,'0') 
+		FROM DUAL
+	</select>
+
+	<!-- 민원요청  (알림 전용 테이블 TN_USR 제외)-->
+    <select id="selectRcvfvrGuidanceCvplRequst" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.RcvfvrGuidanceCvplRequstVo" resultType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.RcvfvrGuidanceCvplRequstVo">
+        SELECT CR.CPTTR_SEQ
+              ,CR.CVPL_REQUST_DH
+              ,CR.USR_SEQ
+              ,CR.CVPL_REQUST_GUIDANCE_NO
+              ,CR.READNG_MTH_CD
+              ,CR.LTRN_NTF_MTH_CD
+              ,CR.SMS_RCV_AGRE_YN
+              ,CR.CVPL_REQUST_STTUS_CD
+              ,(SELECT CD_NM FROM TC_CD WHERE CD = CR.CVPL_REQUST_STTUS_CD) AS CVPL_REQUST_STTUS_NM
+              ,CR.CMPTNC_LOCPLC_CD
+              ,(SELECT ALL_ORG_NM
+                  FROM TM_ORG T1 ,TM_ADM_STD_ORG T2
+                 WHERE T1.ADMINIST_ORG_CD = CR.CMPTNC_LOCPLC_CD AND T1.ORG_CD = T2.ORG_CD
+                   AND T2.CLS_AST_LRG = '2' AND T2.CLS_AST_MDM = '3' AND T2.MNTNAB_YN = 'Y'
+              AND T1.USE_YN = 'Y') AS CMPTNC_LOCPLC_CD_NM
+              ,CR.MNDT_REQSTUSR_NM
+              ,CR.MNDT_REQSTUSR_RELATE_CD
+              ,CR.CVPL_REQUST_DPT_CD
+              ,CR.CVPL_PROCESS_DH
+              ,CR.CVPL_REQUST_CLS_CD
+              ,C.CPTTR_NM
+              ,CR.CPTTR_EMAIL
+              ,C.EMAIL
+              ,C.MOBILE_NO
+              ,C.IHIDNUM_BDRCL
+              ,C.IHIDNUM_SIMPLX
+              ,C.BIZRNO
+              ,CR.MNDT_REQUST_YN
+          FROM TN_CVPL_REQUST_INFO CR
+              ,TN_CPTTR C
+         WHERE CR.CPTTR_SEQ = C.CPTTR_SEQ
+        <if test="cpttrSeq > 0 and cvplRequstDh != null and cvplRequstDh != ''">
+           AND CR.CPTTR_SEQ = #{cpttrSeq}
+           AND CR.CVPL_REQUST_DH = #{cvplRequstDh}
+        </if>
+        <if test="cvplRequstGuidanceNo != null and cvplRequstGuidanceNo != ''">
+           AND CR.CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo}
+        </if>
+    </select>
+
+	<!-- 민원 요청 등록 -->
+    <insert id="insertRcvfvrGuidanceCvplRequst" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.RcvfvrGuidanceCvplRequstVo">
+        INSERT
+          INTO TN_CVPL_REQUST_INFO (
+               CPTTR_SEQ
+              ,CVPL_REQUST_DH
+              ,USR_SEQ
+              ,CVPL_REQUST_GUIDANCE_NO
+              ,READNG_MTH_CD
+              ,LTRN_NTF_MTH_CD
+              ,SMS_RCV_AGRE_YN
+              ,CVPL_REQUST_STTUS_CD
+              ,CMPTNC_LOCPLC_CD
+              ,INDVDL_INFO_AGRE_YN
+              <if test="cpttrEmail != null and cpttrEmail != ''">
+              ,CPTTR_EMAIL
+              </if>
+              <if test='mndtReqstYn == "Y"'>
+              ,MNDT_REQUST_YN
+              ,MNDT_REQSTUSR_NM
+              ,MNDT_REQSTUSR_RELATE_CD
+              </if>
+              ,CVPL_REQUST_DPT_CD
+              ,CVPL_REQUST_CLS_CD
+             ) VALUES (
+               #{cpttrSeq}
+              ,TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+              <if test="cvplRequstClsCd == 'BB0401'">
+              ,#{usrSeq}
+              </if>
+              <if test="cvplRequstClsCd != 'BB0401'">
+              ,NULL
+              </if>
+              ,#{selectMaxGuidanceNo}
+              ,#{readngMthCd, jdbcType=VARCHAR}
+              ,#{ltrnNtfMthCd, jdbcType=VARCHAR}
+              ,#{smsRcvAgreYn, jdbcType=VARCHAR}
+              ,#{cvplRequstSttusCd, jdbcType=VARCHAR}
+              ,#{cmptncLocplcCd, jdbcType=VARCHAR}
+              ,'Y'
+              <if test="cpttrEmail != null and cpttrEmail != ''">
+              ,#{cpttrEmail}
+              </if>
+              <if test='mndtReqstYn == "Y"'>
+              ,#{mndtReqstYn}
+              ,''
+              <!-- ,#{mndtReqstusrNm} -->
+              ,#{mndtReqstusrRelateCd}
+              </if>
+              <choose>
+                  <when test="cvplRequstDptCd != null and  cvplRequstDptCd != ''">
+              ,#{cvplRequstDptCd}
+                  </when>
+                  <otherwise>
+              ,(SELECT O.ORG_CD
+                  FROM TM_ADM_STD_ORG A, TM_ORG O
+                 WHERE A.ORG_CD = O.ORG_CD
+                   AND O.USE_YN='Y'
+                   AND A.MNTNAB_YN = 'Y'
+                   AND A.CLS_AST_LRG = '2'
+                   AND A.CLS_AST_MDM = '3'
+                   AND O.ADMINIST_ORG_CD=#{cmptncLocplcCd})
+                  </otherwise>
+              </choose>
+              <choose>
+                  <when test="cvplRequstClsCd == null or cvplRequstClsCd==''">
+              ,'BB0401'
+                  </when>
+                  <otherwise>
+              ,#{cvplRequstClsCd}
+                  </otherwise>
+              </choose>
+              )
+    </insert>
+
+	<resultMap id="spQualfReciptMapngRst" type="hashmap"></resultMap>
+	<!-- SP_QUALF_RECIPT_MAPNG 프로시저 호출 -->
+	<select id="callSpQualfReciptMapng" parameterType="hashmap" statementType="CALLABLE" >
+		{
+			call SP_QUALF_RECIPT_MAPNG(#{cvplRequstGuidanceNo}
+										,#{psMsg,mode=OUT,jdbcType=VARCHAR,javaType=String}
+			)
+		}
+	</select>
+
+	<resultMap id="spQualfReciptMapngRstVrify" type="hashmap"></resultMap>
+	<!-- SP_QUALF_RECIPT_MAPNG 프로시저 호출 -->
+	<select id="callSpQualfReciptMapngVrify" parameterType="hashmap" statementType="CALLABLE" >
+		{
+			call SP_QUALF_RECIPT_MAPNG_TEST(#{cvplRequstGuidanceNo}
+										,#{psMsg,mode=OUT,jdbcType=VARCHAR,javaType=String}
+			)
+		}
+	</select>
+
+	<!-- 민원 요청 리스트 -->
+    <select id="selectRcvfvrGuidanceCvplRequstList" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.RcvfvrGuidanceCvplRequstVo" resultType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.RcvfvrGuidanceCvplRequstVo">
+        SELECT CPTTR_SEQ
+              ,CVPL_REQUST_DH
+              ,CVPL_REQUST_GUIDANCE_NO
+              ,USR_NM
+              ,CVPL_REQUST_STTUS_CD
+              ,CVPL_REQUST_STTUS_NM
+              ,CMPTNC_LOCPLC_CD
+              ,MNDT_REQSTUSR_NM
+              ,MNDT_REQSTUSR_RELATE_CD
+              ,SVC_GUIDANCE_CNT
+              ,SVC_REQST_CNT
+          FROM (SELECT C.CPTTR_SEQ
+                      ,C.CVPL_REQUST_DH
+                      ,C.CVPL_REQUST_GUIDANCE_NO
+                      ,C.USR_SEQ
+                      ,(SELECT USR_NM U FROM TN_USR U WHERE U.USR_SEQ = C.USR_SEQ) AS USR_NM
+                      ,C.READNG_MTH_CD
+                      ,C.LTRN_NTF_MTH_CD
+                      ,C.SMS_RCV_AGRE_YN
+                      ,C.CVPL_REQUST_STTUS_CD
+                      ,(SELECT CD_NM FROM TC_CD WHERE CD = C.CVPL_REQUST_STTUS_CD) AS CVPL_REQUST_STTUS_NM
+                      ,C.CMPTNC_LOCPLC_CD
+                      ,C.MNDT_REQSTUSR_NM
+                      ,C.MNDT_REQSTUSR_RELATE_CD
+                      ,C.CVPL_REQUST_DPT_CD
+                      ,C.CVPL_REQUST_CLS_CD
+                      ,(SELECT COUNT(1) FROM TN_SVC_GUIDANCE_REQST_RSLT S
+                         WHERE S.CVPL_REQUST_GUIDANCE_NO = C.CVPL_REQUST_GUIDANCE_NO
+                      )AS SVC_GUIDANCE_CNT
+                      ,(SELECT COUNT(1) FROM TN_SVC_GUIDANCE_REQST_RSLT S
+                         WHERE S.CVPL_REQUST_GUIDANCE_NO = C.CVPL_REQUST_GUIDANCE_NO
+                      )AS SVC_REQST_CNT
+                 FROM TN_CVPL_REQUST_INFO C
+               )
+         WHERE 1 = 1
+            AND CVPL_REQUST_CLS_CD = 'BB0401'
+        <!-- <if test="svcListCls != null and svcListCls != '' and svcListCls == 'GUIDANCE'">
+           AND SVC_GUIDANCE_CNT != 0
+        </if> -->
+        <if test="svcListCls != null and svcListCls != '' and svcListCls == 'REQST'">
+           AND SVC_REQST_CNT != 0
+        </if>
+        <if test='cvplRequstDptCd != null and cvplRequstDptCd != ""'>
+           AND CVPL_REQUST_DPT_CD = #{cvplRequstDptCd}
+        </if>
+        <if test="srhNo != null and srhNo != ''">
+           AND REPLACE(CVPL_REQUST_GUIDANCE_NO, ' ', '') LIKE '%' || REPLACE(#{srhNo}, ' ', '') || '%'
+        </if>
+        <if test="srhNm != null and srhNm != ''">
+           AND REPLACE(USR_NM, ' ', '') LIKE '%' || REPLACE(#{srhNm}, ' ', '') || '%'
+        </if>
+        <if test="stSrhDh != null and stSrhDh != ''">
+           AND CVPL_REQUST_DH &gt;= DECODE(#{stSrhDh}, '', '00000000000000', #{stSrhDh} || '000000')
+        </if>
+        <if test="edSrhDh != null and edSrhDh != ''">
+           AND CVPL_REQUST_DH &lt;= DECODE(#{edSrhDh}, '', '99999999999999', #{edSrhDh} || '999999')
+        </if>
+        <if test="ihidnumSimplx != null and ihidnumSimplx != ''">
+           AND CPTTR_SEQ
+           IN (SELECT CPTTR_SEQ
+                 FROM TN_CPTTR
+                WHERE IHIDNUM_SIMPLX = #{ihidnumSimplx})
+        </if>
+        ORDER BY CVPL_REQUST_DH DESC
+    </select>
+
+    <!-- 진행 중인 민원 요청 건수 조회 -->
+    <select id="selectOpenCvplRequstCnt" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.RcvfvrGuidanceCvplRequstVo" resultType="int">
+        SELECT COUNT(1)
+          FROM TN_CVPL_REQUST_INFO
+         WHERE CPTTR_SEQ = #{cpttrSeq}
+           AND CVPL_REQUST_GUIDANCE_NO != #{cvplRequstGuidanceNo}
+           AND CVPL_REQUST_STTUS_CD IN ('YC0101', 'YC0103', 'YC0104')
+    </select>
+
+    <!-- 민원 요청 상태 업데이트 -->
+    <update id="updateCvplRequstSttusCd" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.RcvfvrGuidanceCvplRequstVo">
+        UPDATE TN_CVPL_REQUST_INFO
+           SET CVPL_REQUST_STTUS_CD = #{cvplRequstSttusCd}
+              ,CVPL_PROCESS_DH = TO_CHAR(sysdate, 'YYYYMMDDHH24MISS')
+              <if test="cvplRequstClsCd == 'BB0402' or cvplRequstClsCd == 'BB0403'">
+              ,USR_SEQ = #{usrSeq}
+              </if>
+         WHERE CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo}
+    </update>
+    
+    <!--  연계 보내야 되는 사람 목록 조회-->
+    <select id="selectSendPersonsList" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.RcvfvrGuidanceCvplRequstVo" resultType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.RcvfvrGuidanceCvplRequstVo">
+        <![CDATA[
+		SELECT 
+		    AB.*
+		FROM(
+		    SELECT  
+		        DISTINCT PERSON_NAME, 
+		        JUMIN_NO,
+		        HANGKIKCD,
+		        NVL(RELATION,'01') BONIN_GUBUN,
+		        (SELECT CASE WHEN   TO_CHAR (SYSDATE, 'yyyymmdd')- TO_CHAR (TO_DATE (
+		               (CASE  WHEN SUBSTR (JUMIN_NO, 7, 1) IN('0', '9')
+		                      THEN '18' WHEN SUBSTR (JUMIN_NO, 7, 1) IN ('1', '2', '5', '6')
+		                      THEN '19' WHEN SUBSTR (JUMIN_NO, 7, 1) IN ('3', '4', '7', '8')
+		                      THEN '20' END || SUBSTR (JUMIN_NO, 1, 2)|| SUBSTR (JUMIN_NO, 3, 2)|| SUBSTR (JUMIN_NO, 5, 2)),
+		               'yyyymmdd'),'yyyymmdd')- 140000 >= 0 THEN'N' ELSE 'Y'END AS AGREE_YN FROM DUAL) AS FLAG
+		    FROM (
+		        SELECT  
+		            PERSON_NAME, 
+		            JUMIN_NO, 
+		            SEDAEJU_KWAN, 
+		            HANGKIKCD
+		        FROM (
+		            SELECT 
+		                LNK_LIST_SEQ, 
+		                MAX(JUMIN_NO) AS JUMIN_NO, 
+		                MAX(SEDAEJU_KWAN) AS SEDAEJU_KWAN, 
+		                REPLACE(MAX(PERSON_NAME),' ','') AS PERSON_NAME,
+		                MAX(HANGKIKCD) HANGKIKCD
+		            FROM (
+		                SELECT 
+		                    LNK_LIST_SEQ,
+		                    CASE WHEN LNK_ITM_NM='inputId' THEN QUALF_ITM_LNK_RSLT END  AS JUMIN_NO,
+		                    CASE WHEN LNK_ITM_NM='sedaejuKwan' THEN QUALF_ITM_LNK_RSLT END  AS SEDAEJU_KWAN,
+		                    CASE WHEN LNK_ITM_NM='inputName' THEN QUALF_ITM_LNK_RSLT END  AS PERSON_NAME,
+		                    CASE WHEN LNK_ITM_NM='hangkikcd' THEN QUALF_ITM_LNK_RSLT END  AS HANGKIKCD
+		                FROM 
+		                    TN_QUALF_INFO_REQUST_RSLT
+		                WHERE 
+		                    LNK_ID='I-IF-MOIS-007'
+		                    AND LNK_REQUST_NO=#{sendTxid})
+		            GROUP BY 
+		                LNK_LIST_SEQ))A, 
+		        (SELECT 
+		            RELATION, 
+		            BIRTH
+		        FROM (
+		            SELECT 
+		                LNK_LIST_SEQ, 
+		                MAX(RELATION) RELATION,
+		                MAX(BIRTH) BIRTH 
+		            FROM (
+		                SELECT 
+		                    LNK_LIST_SEQ,
+		                    CASE WHEN LNK_ITM_NM='relation' THEN QUALF_ITM_LNK_RSLT END  AS RELATION,
+		                    CASE WHEN LNK_ITM_NM='birth' THEN QUALF_ITM_LNK_RSLT END  AS BIRTH
+		                FROM 
+		                    TN_QUALF_INFO_REQUST_RSLT
+		                WHERE 
+		                    LNK_ID='I-IF-SCOURT-001' 
+		                    AND LNK_REQUST_NO=#{sendTxid}) 
+		                GROUP BY 
+		                    LNK_LIST_SEQ) 
+		        WHERE 
+		            RELATION='13') B  
+		    WHERE 
+		        SUBSTR(A.JUMIN_NO,1,6)=B.BIRTH(+)
+		        AND (A.JUMIN_NO= #{ihidnum} OR RELATION='13')) AB
+		WHERE 
+		    BONIN_GUBUN='01' 
+		    OR (FLAG='Y' AND BONIN_GUBUN='13')  ]]>
+		<if test="agreeSttusCd != '02'">
+        	AND AB.BONIN_GUBUN NOT IN('13')
+        </if>
+    </select>
+	
+	<!-- 가족관계등록부, 주민등록등본정보 연계 확인 -->
+	<select id="selectCntLnkId" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.RcvfvrGuidanceCvplRequstVo" resultType="String">		
+		SELECT 
+		    CASE WHEN A=1 AND B=1 THEN 'A' --첫번째 원본()
+		         WHEN A=1 AND B=0 THEN 'B' --주민세대정보()
+		         WHEN A=0 THEN 'C' END  AS FLAG --본인만
+		FROM(
+		    SELECT 
+		        NVL(MAX(CASE WHEN LNK_ID= 'I-IF-MOIS-007' AND REQUST_SUCC_YN ='Y' THEN 1 END),0) A,
+		        NVL(MAX(CASE WHEN LNK_ID= 'I-IF-SCOURT-001' THEN 1 END),0) B
+		    FROM(
+		        SELECT 
+		            DISTINCT LNK_ID,
+                    REQUST_SUCC_YN
+		        FROM
+		            TN_QUALF_INFO_REQUST_RSLT
+		        WHERE 
+		            LNK_ID IN ('I-IF-MOIS-007', 'I-IF-SCOURT-001')
+	            AND LNK_REQUST_NO=#{sendTxid}))
+	</select> 
+	
+	<!-- 가족관계등록부 오류 시 세대주, 14세 미만 체크 -->
+	<select id="selectSendPersonsListMois" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.RcvfvrGuidanceCvplRequstVo" resultType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.RcvfvrGuidanceCvplRequstVo">		
+		<![CDATA[ 
+		SELECT 
+		    * 
+		FROM (
+		    SELECT  
+		        PERSON_NAME, 
+		        JUMIN_NO, 
+		        SEDAEJU_KWAN, 
+		        HANGKIKCD, 
+		        (SELECT CASE WHEN TO_CHAR (SYSDATE, 'yyyymmdd') - 
+		            TO_CHAR (TO_DATE ((CASE  WHEN SUBSTR (JUMIN_NO, 7, 1) IN('0', '9')
+		                              THEN '18' WHEN SUBSTR (JUMIN_NO, 7, 1) IN ('1', '2', '5', '6')
+		                              THEN '19' WHEN SUBSTR (JUMIN_NO, 7, 1) IN ('3', '4', '7', '8')
+		                              THEN '20' END || SUBSTR (JUMIN_NO, 1, 2)|| SUBSTR (JUMIN_NO, 3, 2)|| SUBSTR (JUMIN_NO, 5, 2)),'yyyymmdd'),'yyyymmdd')- 140000 >= 0 
+		            THEN 'N' ELSE 'Y'END AS AGREE_YN FROM DUAL) AS FLAG, 
+		        SEDAEJU_YN,
+                DECODE(JUMIN_NO, #{ihidnum}, '01', '13') AS BONIN_GUBUN
+		    FROM (
+		        SELECT 
+		            LNK_LIST_SEQ, 
+		            MAX(JUMIN_NO) AS JUMIN_NO, 
+		            MAX(SEDAEJU_KWAN) AS SEDAEJU_KWAN, 
+		            REPLACE(MAX(PERSON_NAME),' ','') AS PERSON_NAME,
+		            MAX(HANGKIKCD) AS HANGKIKCD, 
+		            MAX(SEDAEJU_YN) AS SEDAEJU_YN 
+		        FROM (
+		            SELECT 
+		                LNK_LIST_SEQ,
+		                CASE WHEN LNK_ITM_NM='inputId' THEN QUALF_ITM_LNK_RSLT END  AS JUMIN_NO,
+		                CASE WHEN LNK_ITM_NM='sedaejuKwan' THEN QUALF_ITM_LNK_RSLT END  AS SEDAEJU_KWAN,
+		                CASE WHEN LNK_ITM_NM='inputName' THEN QUALF_ITM_LNK_RSLT END  AS PERSON_NAME,
+		                CASE WHEN LNK_ITM_NM='hangkikcd' THEN QUALF_ITM_LNK_RSLT END  AS HANGKIKCD,
+		                CASE WHEN LNK_ITM_NM='sedaejuId' AND QUALF_ITM_LNK_RSLT= #{ihidnum} THEN 'Y' ELSE 'N' END AS SEDAEJU_YN
+		            FROM 
+		                TN_QUALF_INFO_REQUST_RSLT
+		            WHERE 
+		                LNK_ID='I-IF-MOIS-007'
+		                AND LNK_REQUST_NO = #{sendTxid} )
+		            GROUP BY 
+		                LNK_LIST_SEQ))
+		    WHERE  
+		        ((FLAG = DECODE(SEDAEJU_YN,'Y','Y') AND SEDAEJU_KWAN='자녀' ) OR JUMIN_NO = #{ihidnum} ) ]]>
+        	<if test="agreeSttusCd != '02'">
+        		AND BONIN_GUBUN = '01'
+        	</if>
+	</select> 
+	
+	<!-- 가족정보연계, 세대정보연계 오류시 결과코드 ZZ2704 -->
+	<update id="updateCvplRequstClsCd" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.RcvfvrGuidanceCvplRequstVo">
+		UPDATE TN_CVPL_REQUST_INFO
+		SET REQUST_RSLT_CD = #{rsltCd}
+		WHERE CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo}
+	</update>
+	
+	<update id="updateCvplIhidnum" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.RcvfvrGuidanceCvplRequstVo">
+		UPDATE TN_CPTTR
+		SET IHIDNUM_BDRCL = ''
+		WHERE CPTTR_SEQ = (SELECT CPTTR_SEQ FROM TN_CVPL_REQUST_INFO WHERE CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo})
+		
+	</update>
+	
+	<delete id="deleteReciptInfoRequstRslt" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.RcvfvrGuidanceCvplRequstVo">
+		DELETE TN_QUALF_INFO_REQUST_RSLT
+		WHERE LNK_REQUST_NO = #{sendTxid}
+		AND REQUST_SUCC_YN = 'Y'
+	</delete>
+
+	<update id="updateReciptInfoRequst" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.RcvfvrGuidanceCvplRequstVo">
+		UPDATE TN_QUALF_RECIPT_INFO_REQUST
+		SET REQUST_SUCC_YN = 'N'
+		WHERE 1=1
+		<choose>
+			<when test='errType=="C"'>
+				AND LNK_ID IN ('I-IF-MOIS-007', 'I-IF-SCOURT-001')
+			</when>
+			<otherwise>
+				AND LNK_ID = 'I-IF-SCOURT-001'
+			</otherwise>
+		</choose>
+		AND CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo}
+	</update>
+</mapper>

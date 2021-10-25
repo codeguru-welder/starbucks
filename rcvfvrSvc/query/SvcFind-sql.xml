@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper SYSTEM "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="svcFind">
+
+<select id="selectSimpleFindList" parameterType="kr.go.portal.rcvfvrSvc.svcFind.vo.SimpleFindVo" resultType="kr.go.portal.rcvfvrSvc.svcFind.vo.SimpleFindVo">
+	<![CDATA[
+	SELECT 
+	    DISTINCT A.SVC_SEQ,
+	    A.SVC_ID,
+	    SVC_NM,
+	    DECODE(FIXES_GUIDANCE_YN, 'Y', SVC_CTS_SUMRY, SVC_PPO) AS SVC_PPO,
+	    REQST_TMLMT_ETC,
+		 (SELECT REGEXP_REPLACE (
+			          REGEXP_REPLACE (
+			             REGEXP_REPLACE (
+			                REGEXP_REPLACE (
+			                   LISTAGG (SPORT_FR_CD, ',')
+			                      WITHIN GROUP (ORDER BY SPORT_FR_CD),
+			                   'BA0602|BA0603|BA0604|BA0605',
+			                   'BA0601'),
+			                'BA0609|BA0610|BA0611',
+			                'BA0608'),
+			             'BA0612|BA0613',
+			             'BA0614'),
+			          '([^,]+)(,\1)+',
+			          '\1')
+			FROM TN_SPORT_FR
+				   WHERE SVC_SEQ = A.SVC_SEQ)
+			AS SPORT_FR_CD_ARR,		
+			 (SELECT LISTAGG (REQST_MEAN_CD, ',')
+						WITHIN GROUP (ORDER BY REQST_MEAN_CD)
+				FROM TN_SVC_REQST_MEAN
+			   WHERE SVC_SEQ = A.SVC_SEQ)
+				AS REQST_MEAN_CD_ARR,
+	        DECODE(PROVD_SVC_VW_CNT, NULL, 0, PROVD_SVC_VW_CNT) AS PROVD_SVC_VW_CNT,
+	        DECODE(RCV_ORG_CLS_CD, 'BA2102', RCV_ORG_NM,'BA2101',(SELECT ORG_NM FROM TM_ADM_STD_ORG A WHERE A.ORG_CD = RCV_ORG_CD), (SELECT CD_NM FROM TC_CD WHERE CD=RCV_ORG_CLS_CD)) AS RCV_ORG_NM,
+            REFRNC_TEL_NO,
+            REFRNC_NM,
+            (SELECT LISTAGG (CAST(REFRNC_NM AS VARCHAR(100)), ', ') WITHIN GROUP (ORDER BY REFRNC_SEQ) FROM TN_SVC_REFRNC WHERE SVC_SEQ=A.SVC_SEQ) AS REFRNC_NM_ARR,
+            (SELECT LISTAGG (CAST(REFRNC_NM AS VARCHAR(100)) || '/ '||REFRNC_TEL_NO, ',') WITHIN GROUP (ORDER BY REFRNC_SEQ) FROM TN_SVC_REFRNC WHERE SVC_SEQ=A.SVC_SEQ) AS REFRNC_ARR]]>
+	FROM
+    TN_SVC A, (SELECT PROVD_SVC_VW_CNT, SVC_ID FROM TN_SVC_VW_CNT WHERE VW_SYS_CD = 'ZZ1201') V,
+	(
+	SELECT
+        DISTINCT A.SVC_SEQ
+    FROM(
+        SELECT
+            DISTINCT A.SVC_SEQ
+        FROM(    
+            SELECT
+                DISTINCT A.SVC_SEQ
+            FROM(
+                SELECT 
+                    DISTINCT A.SVC_SEQ 
+                FROM 
+                    (
+                     SELECT 
+                        DISTINCT SVC_SEQ 
+                     FROM
+                        (SELECT 
+                            A.SVC_SEQ 
+                         FROM TN_SVC A, TN_GUIDANCE_ATT_INFO B
+                            WHERE A.SVC_SEQ=B.SVC_SEQ
+                            AND ATT_GRP_CD='JA01'
+                            AND B.ATT_ITM_CD =#{gender} )
+                    ) A, TN_GUIDANCE_ATT_INFO B
+                    WHERE A.SVC_SEQ=B.SVC_SEQ 
+                    AND ATT_GRP_CD='JA01' 
+                    AND B.ATT_ITM_CD =#{age}
+                )A, TN_GUIDANCE_ATT_INFO C
+                WHERE A.SVC_SEQ = C.SVC_sEQ
+                AND ATT_GRP_CD='JA02'
+                <if test="hshldChartrArray != null and hshldChartrArray != ''">
+					<foreach collection='hshldChartrArray' index='index' item='hshldChartr' open='AND C.ATT_ITM_CD IN (' close=')' separator=",">
+						#{hshldChartr}
+					</foreach>
+				</if>
+            )A, TN_GUIDANCE_ATT_INFO D
+            WHERE A.SVC_SEQ = D.SVC_SEQ
+            AND ATT_GRP_CD='JA03'
+            <if test="jobArray != null and jobArray != ''">
+				<foreach collection='jobArray' index='index' item='job' open='AND D.ATT_ITM_CD IN (' close=')' separator=",">
+					#{job}
+				</foreach>
+			</if>
+        )A, TN_GUIDANCE_ATT_INFO E
+        WHERE A.SVC_SEQ = E.SVC_SEQ
+        AND ATT_GRP_CD='JA04'
+        <if test="incomeInfoArray != null and incomeInfoArray != ''">
+			<foreach collection='incomeInfoArray' index='index' item='incomeInfo' open='AND E.ATT_ITM_CD IN (' close=')' separator=",">
+				#{incomeInfo}
+			</foreach>
+		</if>
+	) B
+	WHERE A.SVC_SEQ=B.SVC_SEQ
+    AND A.SVC_ID = V.SVC_ID(+) 
+    AND FIXES_GUIDANCE_YN='Y'
+    AND DEL_YN = 'N'
+    AND EPRSS_YN='Y'
+    AND SVC_STTUS_CD = 'YA0105'
+    ORDER BY PROVD_SVC_VW_CNT DESC
+    
+</select>
+
+<!-- 간편찾기 결과 insert -->
+<insert id="insertSimpleFindResult" parameterType="kr.go.portal.rcvfvrSvc.svcFind.vo.SimpleFindVo">
+	INSERT INTO TN_BNEF_VW_CHOICE_LOG(
+		BNEF_VW_SEQ,
+		CHOICE_SEX_CD,
+		CHOICE_AGE_CD,
+		INDVDL_HSHLD_CHARTR_CD,
+		CPTTR_ID,
+		REG_DH
+	)
+	VALUES (
+		#{sqBnefVwSeq},
+		#{gender},
+		#{age},
+		#{chartrCd},
+		#{userId},
+		SYSDATE
+	)
+</insert>
+
+<select id="selectBnefVwSeq" resultType="int">
+	SELECT SQ_BNEF_VW_SEQ.nextval FROM DUAL
+</select>
+</mapper>

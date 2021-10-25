@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper SYSTEM "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tnLnkRequstItmInfo">
+
+	<!-- 연계 요청 항목 정보 리스트 -->
+	<select id="selectTnLnkRequstItmInfoList" resultType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnLnkRequstItmInfoVo" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnLnkRequstItmInfoVo">
+		SELECT
+			LNK_ID
+			,REQUST_CLS_CD
+			,REQUST_ITM_NM
+			,REQUST_ITM_VAL
+			,USE_YN
+			,REGR_SEQ
+			,REG_DH
+			,MODR_SEQ
+			,MOD_DH
+		FROM	TN_LNK_REQUST_ITM_INFO
+		WHERE 1=1
+		AND LNK_ID = #{lnkId}
+	</select>
+
+	<!-- 연계 요청 항목 정보 상세 뷰 -->
+	<select id="selectTnLnkRequstItmInfo" resultType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnLnkRequstItmInfoVo">
+		SELECT
+			LNK_ID
+			,REQUST_CLS_CD
+			,REQUST_ITM_NM
+			,REQUST_ITM_VAL
+			,USE_YN
+			,REGR_SEQ
+			,REG_DH
+			,MODR_SEQ
+			,MOD_DH
+		FROM	TN_LNK_REQUST_ITM_INFO
+		WHERE 1=1
+	</select>
+
+	<!-- 연계 요청 항목 정보 등록 -->
+	<insert id="insertTnLnkRequstItmInfo" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnLnkRequstItmInfoVo">
+		INSERT INTO TN_LNK_REQUST_ITM_INFO (
+			LNK_ID
+			,REQUST_CLS_CD
+			,REQUST_ITM_NM
+			,REQUST_ITM_VAL
+			,USE_YN
+			,REGR_SEQ
+			,REG_DH
+			,MODR_SEQ
+			,MOD_DH
+		) VALUES (
+			#{lnkId}
+			,#{requstClsCd}
+			,#{requstItmNm}
+			,#{requstItmVal}
+			,#{useYn}
+			,#{regrSeq}
+			,#{regDh}
+			,#{modrSeq}
+			,#{modDh}
+ 		)
+	</insert>
+
+	<!-- 연계 요청 항목 정보 수정 -->
+	<update id="updateTnLnkRequstItmInfo" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnLnkRequstItmInfoVo">
+		UPDATE TN_LNK_REQUST_ITM_INFO SET
+			LNK_ID = #{lnkId}
+			,REQUST_CLS_CD = #{requstClsCd}
+			,REQUST_ITM_NM = #{requstItmNm}
+			,REQUST_ITM_VAL = #{requstItmVal}
+			,USE_YN = #{useYn}
+			,REGR_SEQ = #{regrSeq}
+			,REG_DH = #{regDh}
+			,MODR_SEQ = #{modrSeq}
+			,MOD_DH = #{modDh}
+ 		WHERE 1=1
+	</update>
+
+</mapper>

@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper SYSTEM "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="rcvfvrSvc">
+
+	<!-- 서비스 조회 -->
+	<select id="selectRcvfvrSvc" parameterType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo" resultType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo">
+		SELECT SVC_ID,
+			 (SELECT REGEXP_REPLACE (
+			          REGEXP_REPLACE (
+			             REGEXP_REPLACE (
+			                REGEXP_REPLACE (
+			                   LISTAGG (SPORT_FR_CD, ',')
+			                      WITHIN GROUP (ORDER BY SPORT_FR_CD),
+			                   'BA0602|BA0603|BA0604|BA0605',
+			                   'BA0601'),
+			                'BA0609|BA0610|BA0611',
+			                'BA0608'),
+			             'BA0612|BA0613',
+			             'BA0614'),
+			          '([^,]+)(,\1)+',
+			          '\1')
+				FROM TN_SPORT_FR
+					   WHERE SVC_SEQ = S.SVC_SEQ)
+				AS SPORT_FR_CD_ARR,	
+		       SVC_NM,
+		       SVC_PPO,
+		       REQST_TMLMT_ST_DT || REQST_TMLMT_ED_DT AS REQST_TMLMT_DATE,
+		       REQST_TMLMT_ETC,
+				 (SELECT LISTAGG (REQST_MEAN_CD, ',')
+							WITHIN GROUP (ORDER BY REQST_MEAN_CD)
+					FROM TN_SVC_REQST_MEAN
+				   WHERE SVC_SEQ = S.SVC_SEQ)
+					AS REQST_MEAN_CD_ARR,				  
+		       SPORT_TG,
+		       DUP_IMPRTY_SVC,
+		       SLCTN_STDR,
+		       SVC_CTS,
+		       REQST_PROCSS,
+		       POSES_PAPERS,
+		       DECODE(RCV_ORG_CLS_CD, 'BA2102', RCV_ORG_NM,'BA2101',(SELECT ORG_NM FROM TM_ADM_STD_ORG A WHERE A.ORG_CD = RCV_ORG_CD), (SELECT CD_NM FROM TC_CD WHERE CD=RCV_ORG_CLS_CD)) AS RCV_ORG_NM,
+		       REFRNC_TEL_NO,
+               ONLN_REQST_SITE_URL,
+               (SELECT DIRECT_RECPT_REQST_URL FROM TN_SVC_DIRECT_RECPT WHERE SVC_ID = S.SVC_ID) AS DIRECT_RECPT_REQST_URL,
+               (SELECT DIRECT_RECPT_MOBILE_URL FROM TN_SVC_DIRECT_RECPT WHERE SVC_ID = S.SVC_ID) AS DIRECT_RECPT_MOBILE_URL,
+               MOD_DH,
+               SVC_REG_DH,
+               (SELECT ALL_ORG_NM FROM TM_ADM_STD_ORG A WHERE A.ORG_CD = S.JRSD_ORG_CD) AS ORG_NM,
+               REFRNC_NM
+		  FROM TN_SVC S
+		 WHERE SVC_SEQ = (SELECT MAX(SVC_SEQ) FROM TN_SVC WHERE SVC_ID= #{svcId})
+	</select>
+
+	<!-- 프레임 설정 조회 -->
+	<select id="selectFrmeSet" parameterType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo" resultType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo">
+		SELECT FRME_CLS,
+		       SVC_AST_CLS,
+		       (SELECT CD_NM FROM TC_CD WHERE CD = UPEND_BG_COLOR_CLS) AS UPEND_BG_COLOR_CLS,
+		       (SELECT CD_NM FROM TC_CD WHERE CD = UPEND_BG_IMG_TY_CLS) AS UPEND_BG_IMG_TY_CLS,
+		       SPORT_FR_ICON_CLS
+		  FROM TN_SVC_FRME_SET_INFO
+		 WHERE SVC_SEQ = (SELECT MAX(SVC_SEQ) FROM TN_SVC WHERE SVC_ID = #{svcId})
+	</select>
+
+	<!-- 관계법령 조회 -->
+	<select id="selectRelateLs" parameterType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo" resultType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo">
+		SELECT T2.ADMRUL_KND,
+			   T2.ADMRUL_NM
+		  FROM TN_SVC_ADMRUL_INFO T1, TM_ADMRUL T2
+		 WHERE     T1.ADMRUL_SEQ = T2.ADMRUL_SEQ
+		       AND T1.SVC_SEQ = (SELECT MAX(SVC_SEQ)
+		                           FROM TN_SVC
+		                          WHERE SVC_ID = #{svcId})
+	</select>
+	
+	<!-- 수기법령 조회 -->
+	<select id="selectMemorRegLsInfo" parameterType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo" resultType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo">
+		SELECT 
+		    SVC_SEQ
+		    ,MEMOR_REG_NO
+		    ,LS_KND_CD
+		    ,(SELECT CD_NM FROM TC_CD C WHERE C.CD = LS_KND_CD) LS_KND_CD_NM
+		    ,LS_NM_KO
+		    ,ATCL_ONE
+		    ,ATCL_TWO
+		    ,CLUS 
+		    ,ETC
+		FROM TN_MEMOR_REG_LS_INFO
+		WHERE SVC_SEQ =  (SELECT MAX(SVC_SEQ)
+		                   FROM TN_SVC
+		                  WHERE SVC_ID = #{svcId})
+	</select>
+	
+	<!-- 행정규칙 조회 -->
+	<select id="selectAdmrulInfo" parameterType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo" resultType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo">
+		SELECT 
+		    ADMRUL_SEQ
+		    ,SVC_SEQ
+		    ,(SELECT ADMRUL_NM FROM TM_ADMRUL L WHERE L.ADMRUL_SEQ = A.ADMRUL_SEQ) ADMRUL_NM
+		    ,(SELECT PRML_DT FROM TM_ADMRUL L WHERE L.ADMRUL_SEQ = A.ADMRUL_SEQ) PRML_DT
+		    ,(SELECT PRML_NO FROM TM_ADMRUL L WHERE L.ADMRUL_SEQ = A.ADMRUL_SEQ) PRML_NO
+		    ,SVC_ADMRUL_NO
+		    ,ATCL_ONE
+		    ,ATCL_TWO
+		    ,CLUS
+		    ,ETC
+		FROM TN_SVC_ADMRUL_INFO A
+		WHERE SVC_SEQ = (SELECT MAX(SVC_SEQ)
+		                   FROM TN_SVC
+		                  WHERE SVC_ID = #{svcId})
+		ORDER BY SVC_ADMRUL_NO
+	</select>
+	
+	<!-- 자치법규 조회 -->
+	<select id="selectAmllInfo" parameterType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo" resultType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo">
+		SELECT 
+		    AMLL_SEQ
+		    ,SVC_SEQ
+		    ,(SELECT AMLL_NM FROM TM_AMLL L WHERE L.AMLL_SEQ = A.AMLL_SEQ) AMLL_NM
+		    ,(SELECT ANC_DT FROM TM_AMLL L WHERE L.AMLL_SEQ = A.AMLL_SEQ) ANC_DT
+		    ,(SELECT ANC_NO FROM TM_AMLL L WHERE L.AMLL_SEQ = A.AMLL_SEQ) ANC_NO
+		    ,SVC_AMLL_NO
+		    ,ATCL_ONE
+		    ,ATCL_TWO
+		    ,CLUS
+		    ,ETC
+		FROM TN_SVC_AMLL_INFO A
+		WHERE SVC_SEQ = (SELECT MAX(SVC_SEQ)
+		                   FROM TN_SVC
+		                  WHERE SVC_ID = #{svcId}) 
+		ORDER BY SVC_AMLL_NO
+	</select>
+	
+	<!-- 수기법령 조회 -->
+	<select id="selectLsInfo" parameterType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo" resultType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo">
+		SELECT 
+		    LSI_SEQ
+		    ,SVC_SEQ
+		    ,(SELECT LS_NM_KO FROM TM_LSI L WHERE L.LSI_SEQ = A.LSI_SEQ) LS_NM_KO
+		    ,(SELECT LS_KND_NM FROM TM_LSI L WHERE L.LSI_SEQ = A.LSI_SEQ) LS_KND_NM
+		    ,(SELECT ANC_DT FROM TM_LSI L WHERE L.LSI_SEQ = A.LSI_SEQ) ANC_DT
+		    ,(SELECT ANC_NO FROM TM_LSI L WHERE L.LSI_SEQ = A.LSI_SEQ) ANC_NO
+		    ,SVC_LS_INFO_NO
+		    ,ATCL_ONE
+		    ,ATCL_TWO
+		    ,CLUS
+		    ,ETC
+		FROM TN_SVC_LS_INFO A
+		WHERE SVC_SEQ = (SELECT MAX(SVC_SEQ)
+		                    FROM TN_SVC
+		                    WHERE SVC_ID = #{svcId})
+		ORDER BY SVC_LS_INFO_NO
+	</select>
+	
+	
+	<!-- 서비스 상세 조회수 추가 -->
+	<select id="selectVwCnt" parameterType="String" resultType="int">
+		SELECT
+			NVL(
+				(SELECT
+					PROVD_SVC_VW_CNT
+				FROM
+					TN_SVC_VW_CNT
+				WHERE
+					SVC_ID = #{index}
+					AND VW_SYS_CD = 'ZZ1201'), -1) PROVD_SVC_VW_CNT
+		FROM
+			DUAL
+	</select>
+	
+	<!-- 서비스 상세 조회수 추가 -->
+	<insert id="insertVwCnt" parameterType="String">
+        INSERT 
+          INTO TN_SVC_VW_CNT ( 
+               SVC_ID
+              ,VW_SYS_CD
+              ,PROVD_SVC_VW_CNT
+        ) VALUES (
+               #{index}
+              ,'ZZ1201'
+              ,1
+        )
+	</insert>
+	
+	<!-- 서비스 상세 조회수 추가 -->
+	<update id="updateVwCnt" parameterType="String">
+		UPDATE TN_SVC_VW_CNT 
+           SET PROVD_SVC_VW_CNT = PROVD_SVC_VW_CNT+1
+         WHERE SVC_ID = #{index}
+         AND VW_SYS_CD = 'ZZ1201'
+	</update>
+
+	<!-- 만족도 평가 INSERT -->
+	<insert id="insertRcvfvrSvcStsfdgEvl" parameterType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo">
+		INSERT INTO TN_STSFDG_INV(
+			STSFDG_SEQ,
+			SYS_CLS_CD,
+			MN_CD,
+			MN_NM,
+			SVC_ID,
+			IMP_OPINION,
+			CPTTR_ID,
+			USR_SEQ,
+			REG_DH
+		)
+		VALUES (
+			#{stsfdgSeq},
+			'ZZ2801',
+			#{mnCd},
+			#{mnNm},
+			#{svcId},
+			#{impOpinion},
+			#{cpttrId},
+			'',
+			SYSDATE
+		)
+		<selectKey keyProperty="stsfdgSeq" resultType="int" order="BEFORE">
+            SELECT SQ_STSFDG_SEQ.NEXTVAL FROM DUAL
+        </selectKey>
+	</insert>
+	
+	<!-- 만족도 평가 SELECT -->
+	<select id="selectRcvfvrSvcStsfdgEvl" parameterType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo" resultType="java.lang.Integer">
+		SELECT
+			COUNT(1)
+		FROM
+			TN_STSFDG_INV
+		WHERE
+			SYS_CLS_CD = 'ZZ2801'
+			AND CPTTR_ID = #{cpttrId}
+			<if test="mnCd != null and mnCd != ''">
+				AND MN_CD = #{mnCd}
+				<if test="mnCd == 'ZZ2902'">
+					AND SVC_ID = #{svcId}
+				</if>
+			</if>
+	</select>
+	
+	<!-- 이벤트 응모 update -->
+	<update id="updateEventStsfdgEvl" parameterType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo">
+		UPDATE TN_STSFDG_INV 
+		   SET MOBILE_NO = #{mobileNo}
+		 WHERE STSFDG_SEQ = #{stsfdgSeq}
+		 	AND CPTTR_ID = #{cpttrId}
+		 	AND SYS_CLS_CD = 'ZZ2801'
+		 	
+		<selectKey keyProperty="stsfdgSeq" resultType="int" order="BEFORE">
+            SELECT STSFDG_SEQ FROM TN_STSFDG_INV WHERE SYS_CLS_CD = 'ZZ2801'
+			AND CPTTR_ID = #{cpttrId}
+			AND MN_CD = #{mnCd}
+			<if test="mnCd == 'ZZ2902'">
+				AND SVC_ID = #{svcId}
+			</if>
+        </selectKey>
+	</update>
+	
+	<!-- 서비스 문의처 정보 리스트 -->
+	<select id="selectSvcRefrncList" parameterType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo" resultType="kr.go.portal.rcvfvrSvc.rcvfvrSvc.vo.RcvfvrSvcVo">
+        SELECT REFRNC_SEQ
+              ,REFRNC_NM
+              ,REFRNC_TEL_NO
+              ,SVC_SEQ
+          FROM TN_SVC_REFRNC
+         WHERE SVC_SEQ = (SELECT MAX(SVC_SEQ)
+		                    FROM TN_SVC
+		                    WHERE SVC_ID = #{svcId})
+         ORDER BY REFRNC_SEQ
+	</select>
+</mapper>

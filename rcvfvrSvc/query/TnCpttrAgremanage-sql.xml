@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper SYSTEM "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tnCpttrAgremanage">
+
+	<!-- 민원인 동의관리 리스트 -->
+	<select id="selectTnCpttrAgremanageList" resultType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnCpttrAgremanageVo">
+		SELECT
+			AGREUSR_SEQ
+			,CPTTR_SEQ
+			,USE_YN
+			,AGREUSR_NM
+			,AGREUSR_IHIDNUM_SIMPLX
+			,AGREUSR_IHIDNUM_BDRCL
+			,AGREUSR_BRTHDY
+			,AGREUSR_SEX_CD
+		FROM	TN_CPTTR_AGREMANAGE
+		WHERE 1=1
+	</select>
+
+	<!-- 민원인 동의관리 상세 뷰 -->
+	<select id="selectTnCpttrAgremanage" resultType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnCpttrAgremanageVo" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnCpttrAgremanageVo">
+		SELECT
+			AGREUSR_SEQ
+			,CPTTR_SEQ
+			,USE_YN
+			,AGREUSR_NM
+			,AGREUSR_IHIDNUM_SIMPLX
+			,AGREUSR_IHIDNUM_BDRCL
+			,AGREUSR_BRTHDY
+			,AGREUSR_SEX_CD
+		FROM	TN_CPTTR_AGREMANAGE
+		WHERE 1=1
+		AND AGREUSR_IHIDNUM_SIMPLX = #{ihidnumSimplx}
+	</select>
+
+	<!-- 민원인 동의관리 등록 -->
+	<insert id="insertTnCpttrAgremanage" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnCpttrAgremanageVo">
+		INSERT INTO TN_CPTTR_AGREMANAGE (
+			AGREUSR_SEQ
+			,CPTTR_SEQ
+			,USE_YN
+			,AGREUSR_NM
+			,AGREUSR_IHIDNUM_SIMPLX
+			,AGREUSR_IHIDNUM_BDRCL
+			,AGREUSR_BRTHDY
+			,AGREUSR_SEX_CD
+		) VALUES (
+			#{agreusrSeq}
+			,#{cpttrSeq}
+			,#{useYn}
+			,#{agreusrNm}
+			,#{ihidnumSimplx}
+			,#{ihidnumBdrcl}
+			,#{agreusrBrthdy}
+			,#{agreusrSexCd}
+ 		)
+ 		<selectKey keyProperty="agreusrSeq" resultType="int" order="BEFORE">
+            SELECT SQ_AGREUSR_SEQ.NEXTVAL FROM DUAL
+        </selectKey>
+	</insert>
+
+	<!-- 민원인 동의관리 수정 
+	AGREUSR_SEQ = #{agreusrSeq}
+			,CPTTR_SEQ = #{cpttrSeq}
+			,USE_YN = #{useYn}
+			,AGREUSR_NM = #{agreusrNm}
+			,AGREUSR_IHIDNUM_SIMPLX = #{agreusrIhidnumSimplx}
+			,AGREUSR_IHIDNUM_BDRCL = #{agreusrIhidnumBdrcl}
+			,AGREUSR_BRTHDY = #{agreusrBrthdy}
+			,AGREUSR_SEX_CD = #{agreusrSexCd}
+	-->
+	<update id="updateTnCpttrAgremanage" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnCpttrAgremanageVo">
+		UPDATE TN_CPTTR_AGREMANAGE SET 
+			USE_YN = #{useYn}
+ 		WHERE 1=1 
+ 		AND AGREUSR_SEQ = #{agreusrSeq}
+	</update>
+
+</mapper>

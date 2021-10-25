@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xmlns:p="http://www.springframework.org/schema/p"
+ xmlns:context="http://www.springframework.org/schema/context"
+ xmlns:mvc="http://www.springframework.org/schema/mvc"
+ xmlns:oxm="http://www.springframework.org/schema/oxm"
+ xmlns:task="http://www.springframework.org/schema/task"
+ xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+        http://www.springframework.org/schema/oxm http://www.springframework.org/schema/oxm/spring-oxm-4.3.xsd
+        http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.3.xsd">
+
+    <!--
+        - The controllers are autodetected POJOs labeled with the @Controller annotation.
+    -->
+    <!-- <mvc:annotation-driven conversion-service="conversionService"/>
+    
+    <bean id="conversionService" class="org.springframework.format.support.FormattingConversionServiceFactoryBean"/> -->
+    
+    <mvc:annotation-driven/>
+     
+    <context:component-scan base-package="egovframework">
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Service"/>
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Repository"/>
+    </context:component-scan>
+    <context:component-scan base-package="kr.co.opensns">
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Service"/>
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Repository"/>
+    </context:component-scan>
+    <context:component-scan base-package="kr.go">
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Service"/>
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Repository"/>
+    </context:component-scan>
+    <context:component-scan base-package="mospa">
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Service"/>
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Repository"/>
+    </context:component-scan>
+    
+    <mvc:default-servlet-handler/>
+    
+    <!--
+        - The form-based controllers within this application provide @RequestMapping 
+        - annotations at the type level for path mapping URLs and @RequestMapping 
+        - at the method level for request type mappings (e.g., GET and POST). 
+        - In contrast, ClinicController - which is not form-based - provides 
+        - @RequestMapping only at the method level for path mapping URLs.
+        -
+        - DefaultAnnotationHandlerMapping is driven by these annotations and is 
+        - enabled by default with Java 5+.
+    -->
+
+    <bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter"/>
+    
+    <bean id="localeResolver" class="org.springframework.web.servlet.i18n.SessionLocaleResolver">
+        <property name="defaultLocale" value="ko_KR"/>
+    </bean>
+    
+    <!-- contentNegoriatingViewResolver -->
+    <bean class="org.springframework.web.servlet.view.ContentNegotiatingViewResolver" p:order="1">
+        <property name="contentNegotiationManager">
+            <bean class="org.springframework.web.accept.ContentNegotiationManager">
+                <constructor-arg>
+                    <bean class="org.springframework.web.accept.PathExtensionContentNegotiationStrategy">
+                        <constructor-arg>
+                            <map>
+                                <entry key="json" value="application/json"/>
+                                <entry key="xml" value="application/xml"/>
+                            </map>
+                        </constructor-arg>
+                    </bean>
+                </constructor-arg>
+            </bean>
+        </property>
+        <property name="defaultViews">
+            <list>
+                <bean id="jsonView" class="org.springframework.web.servlet.view.json.MappingJackson2JsonView"/>
+                <!-- <bean class="org.springframework.web.servlet.view.xml.MarshallingView">
+                    <property name="marshaller" ref="marshaller"/>
+                </bean> -->
+            </list>
+        </property>
+    </bean>
+    
+    <!-- <oxm:jaxb2-marshaller id="marshaller">
+        <oxm:class-to-be-bound name="kr.go.portal.vsg.vo.VsgXmlVo" />
+    </oxm:jaxb2-marshaller> -->
+    
+    <bean id="beanNameViewResolver" class="org.springframework.web.servlet.view.BeanNameViewResolver" p:order="2"/>
+    
+    <!--
+        - This bean configures the 'prefix' and 'suffix' properties of 
+        - InternalResourceViewResolver, which resolves logical view names 
+        - returned by Controllers. For example, a logical view name of "vets" 
+        - will be mapped to "/WEB-INF/jsp/vets.jsp".
+    -->
+    <bean class="org.springframework.web.servlet.view.UrlBasedViewResolver" p:order="3" 
+                p:viewClass="org.springframework.web.servlet.view.JstlView" 
+                p:prefix="/WEB-INF/jsp/" p:suffix=".jsp"/>
+
+    <!-- Validator 설정 -->
+    <bean id="validator" class="org.springframework.validation.beanvalidation.LocalValidatorFactoryBean" />
+    
+    <!-- ================= -->
+	<!--  Custom View 설정 -->
+	<!-- ================= --> 
+	<bean id="downView" class="kr.co.opensns.hanta.common.view.FileDownloadView"/>
+	
+    <!-- Interceptor 설정 -->
+    <mvc:interceptors>
+        <mvc:interceptor>
+            <mvc:mapping path="/portal/**"/>
+            <bean class="kr.go.portal.common.interceptor.KoreaAuthInterceptor"/>
+        </mvc:interceptor>
+    </mvc:interceptors>
+    
+    <!-- Map returned view name "rssViewer" to bean id "rssViewer" -->
+    <bean id="rssViewer" class="kr.go.portal.rss.controller.RssViewer" />
+    
+    <!-- Scheduler 설정 -->
+    <task:scheduler id="portalScheduler" pool-size="15"/>
+    <task:annotation-driven scheduler="portalScheduler"/>
+    
+</beans>

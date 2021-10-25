@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:p="http://www.springframework.org/schema/p"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
+    http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd"
+    > 
+
+    <bean id="certificate_EXE" class="kr.go.common.certificate.impl.CertificateforExcuteFile" scope ="prototype" /> 
+    <bean id="certificate_HTML5" class="kr.go.common.certificate.impl.CertificateforHTML5" scope ="prototype" /> 
+    <bean id="certificate_MOBILE" class="kr.go.common.certificate.impl.CertificateforMoblie" scope ="prototype" />
+    
+    <bean id="Verify_EXE" class="kr.go.common.certificate.impl.VerifyforExcuteFile"/>
+    <bean id="Verify_HTML5" class="kr.go.common.certificate.impl.VerifyforHTML5"/>
+    <bean id="Verify_MOBILE" class="kr.go.common.certificate.impl.VerifyforMoblie"/>
+    
+    <bean id="vidcertificate_EXE" class="kr.go.common.certificate.impl.VidCertificateforExcuteFile"/> 
+    <bean id="vidcertificate_HTML5" class="kr.go.common.certificate.impl.VidCertificateforHTML5"/> 
+    <bean id="vidcertificate_MOBILE" class="kr.go.common.certificate.impl.VidCertificateforMoblie"/> 
+                                                                      
+</beans>

@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper SYSTEM "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="mySvc">
+
+	<!-- 동의 확인 -->
+	<select id="selectAgreYn" parameterType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo" resultType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo">
+		SELECT 
+			CASE WHEN NS_AGREE_YN='Y' AND NS_UNDER_14_AGREE_YN='Y' THEN '02'
+     		WHEN NS_AGREE_YN='Y' AND (NS_UNDER_14_AGREE_YN='N' OR NS_UNDER_14_AGREE_YN IS NULL) THEN '03'
+     		ELSE '01' END AS AGREE_STTUS_CD, 
+     		NS_AGREE_DT AS AGREE_CONFM_DT     		
+		  FROM TB_GWC12
+		 WHERE USER_ID = #{userId}
+    </select>
+
+    <!-- 신청 현황 -->
+	<select id="selectReqstSttus" parameterType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo" resultType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo">
+		SELECT T1.CD AS PROC_STAT, T1.CD_NM AS PROC_NM, COUNT (T2.PROC_STAT) PROC_CNT
+		    FROM (SELECT CD, CD_NM
+		            FROM TB_GWC11
+		           WHERE     GRP_CD = '201'
+		                 AND CD IN ('0101', '0102', '0103', '0105', '0124')) T1,
+		         (SELECT B.PROC_STAT
+		            FROM TB_GWB04 A, TB_GWB05 B, TB_GWB09 C
+		           WHERE     A.CAPP_REQ_NO = B.CAPP_REQ_NO
+		                 AND B.CAPP_REQ_NO = C.CAPP_REQ_NO
+		                 AND B.ACPT_SEQ = C.ACPT_SEQ
+		                 AND B.LEAF_CAPP_BIZ_CD IN ('PG4CG100009','PG4CG100008','PG4CG100006','PG4CG100002','PG4CG100003','PG4CG100004')
+		                 AND B.LEAF_CAPP_BIZ_CD = C.CAPP_BIZ_CD
+		                 AND A.REQ_MAN_RRN = #{rrn}
+		                 AND
+							<choose>
+								<when test = 'searchType == null or searchType == ""'>
+									A.REQ_DT BETWEEN TO_CHAR(SYSDATE-7, 'YYYYMMDD') AND TO_CHAR(SYSDATE, 'YYYYMMDD')
+								</when>
+								<otherwise>
+									A.REQ_DT BETWEEN #{fromDate} AND #{toDate}
+								</otherwise>
+							</choose>
+																   ) T2
+		   WHERE T1.CD = T2.PROC_STAT(+)
+		GROUP BY T1.CD, T1.CD_NM
+		ORDER BY 1
+    </select>
+
+    <!-- 신청 내역 -->
+	<select id="selectReqstDtls" parameterType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo" resultType="kr.go.portal.rcvfvrSvc.mySvc.vo.MySvcVo">
+		  SELECT A.REQ_DT,
+		         B.CAPP_REQ_NO,
+		         B.ACPT_SEQ,
+		         D.CAPP_BIZ_NM,
+		         E.CD_NM
+		    FROM TB_GWB04 A,
+		         TB_GWB05 B,
+		         TB_GWB09 C,
+		         TB_GWA08 D,
+		         TB_GWC11 E
+		   WHERE     A.CAPP_REQ_NO = B.CAPP_REQ_NO
+		         AND B.CAPP_REQ_NO = C.CAPP_REQ_NO
+		         AND B.ACPT_SEQ = C.ACPT_SEQ
+		         AND B.LEAF_CAPP_BIZ_CD IN ('PG4CG100009','PG4CG100008','PG4CG100006','PG4CG100002','PG4CG100003','PG4CG100004')
+		         AND B.LEAF_CAPP_BIZ_CD = C.CAPP_BIZ_CD
+		         AND B.LEAF_CAPP_BIZ_CD = D.CAPP_BIZ_CD
+		         AND B.PROC_STAT = E.CD
+		         AND E.GRP_CD = '201'
+		         AND A.REQ_MAN_RRN = #{rrn}
+		         AND 1=2
+		         AND
+					<choose>
+						<when test = 'searchType == null or searchType == ""'>
+							A.REQ_DT BETWEEN TO_CHAR(SYSDATE-7, 'YYYYMMDD') AND TO_CHAR(SYSDATE, 'YYYYMMDD')
+						</when>
+						<otherwise>
+							A.REQ_DT BETWEEN #{fromDate} AND #{toDate}
+						</otherwise>
+					</choose>
+		ORDER BY B.REQ_TM DESC
+	</select>
+
+	<!-- 맞춤서비스 동의 취소 -->
+	<update id="updateFixessvcAgreCancl" parameterType="String">
+		UPDATE TB_GWC12
+		   SET NS_AGREE_YN = 'N'
+		   	   , NS_AGREE_DT = ''
+               , NS_UNDER_14_AGREE_YN = 'N'
+		 WHERE USER_ID = #{userId}
+	</update>
+
+	<!-- 맞춤서비스 동의 조회 -->
+	<select id="selectFixessvcAgre" parameterType="String" resultType="int">
+		SELECT COUNT (USER_ID)
+		  FROM TB_GWC12
+		 WHERE USER_ID = #{userId} AND NS_AGREE_YN = 'Y'
+	</select>
+
+	<!-- 맞춤서비스 동의 수정 -->
+	<update id="updateFixessvcAgre" parameterType="HashMap">
+		UPDATE TB_GWC12
+		   SET NS_AGREE_YN = 'Y'
+		   	   , NS_AGREE_DT = TO_CHAR (SYSDATE, 'YYYYMMDDHH24MISS')
+               , NS_UNDER_14_AGREE_YN = #{nsUnder14AgreeYn}
+		 WHERE USER_ID = #{userId}
+	</update>
+
+ 	<!-- 맞춤서비스 동의 저장 -->
+	<insert id="insertFixessvcAgre" parameterType="HashMap">
+		INSERT INTO TB_OGV221 (USER_ID,
+		                       AGREE_MAN_SEQ,
+		                       AGREE_USR_GB,
+		                       AGREE_RELATE_CD,
+		                       AGREE_MAN_NM,
+		                       AGREE_MAN_RRN,
+		                       AGREE_MAN_MBTLNUM,
+		                       REQ_MAN_MBL_NO,
+		                       AGREE_STTUS_CD,
+		                       USE_YN,
+		                       AGREE_REQ_DT,
+		                       AGREE_CONFM_DT)
+		     VALUES (#{userId},
+		             '1',
+		             '01',
+		             null,
+		             #{agreeManNm},
+		             #{agreeManRrn},
+		             #{agreeManMbtlnum},
+		             null,
+		             #{agreeSttusCd},
+		             'Y',
+		             TO_CHAR (SYSDATE, 'YYYYMMDDHH24MISS'),
+		             TO_CHAR (SYSDATE, 'YYYYMMDDHH24MISS'))
+	</insert>
+
+	<!-- 데이터 복호화 -->
+	<select id="selectDataDec" parameterType="String" resultType="String">
+		SELECT SPIN.DEC('P001', #{data}) FROM DUAL
+	</select>
+
+</mapper>

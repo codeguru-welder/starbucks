@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:cache="http://www.springframework.org/schema/cache" xmlns:p="http://www.springframework.org/schema/p"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+    
+    <cache:annotation-driven />
+    
+    <bean id="cacheManager" class="kr.go.portal.common.cache.EhCacheManager">
+        <property name="cacheManager" ref="ehCacheManager" />
+    </bean>
+    
+    <bean id="ehCacheManager" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean" p:shared="true">
+        <property name="configLocation" value="classpath:egovframework/spring/ehcache-default.xml" />
+    </bean>
+
+    <bean id="messageSource" class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+        <property name="basenames">
+            <list>
+                <value>classpath:egovframework/message/message-common</value>
+                <value>classpath:egovframework/message/validationMessage</value>
+            </list>
+        </property>
+        <property name="cacheSeconds">
+            <value>60</value>
+        </property>
+    </bean>
+
+    <bean id="leaveaTrace" class="egovframework.rte.fdl.cmmn.trace.LeaveaTrace">
+        <property name="traceHandlerServices">
+            <list>
+                <ref bean="traceHandlerService" />
+            </list>
+        </property>
+    </bean>
+
+    <bean id="traceHandlerService" class="egovframework.rte.fdl.cmmn.trace.manager.DefaultTraceHandleManager">
+        <property name="reqExpMatcher">
+            <ref bean="antPathMater" />
+        </property>
+        <property name="patterns">
+            <list>
+                <value>*</value>
+            </list>
+        </property>
+        <property name="handlers">
+            <list>
+                <ref bean="defaultTraceHandler" />
+            </list>
+        </property>
+    </bean>
+
+    <bean id="antPathMater" class="org.springframework.util.AntPathMatcher" />
+
+    <bean id="defaultTraceHandler" class="egovframework.rte.fdl.cmmn.trace.handler.DefaultTraceHandler" />
+
+    <context:annotation-config />
+    <context:component-scan base-package="egovframework">
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Service" />
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Repository" />
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller" />
+    </context:component-scan>
+    <context:component-scan base-package="mospa">
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Service" />
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Repository" />
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller" />
+    </context:component-scan>
+    <context:component-scan base-package="kr.go">
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Service" />
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Repository" />
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller" />
+    </context:component-scan>
+    <context:component-scan base-package="kr.co.opensns">
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Service" />
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Repository" />
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller" />
+    </context:component-scan>
+
+    <bean class="kr.go.portal.common.error.handler.LogSimpleMappingExceptionResolver">
+        <property name="exceptionMappings">
+            <props>
+                <prop key="java.lang.RuntimeException">common/error/error</prop>
+                <prop key="java.lang.Exception">common/error/error</prop>
+                <prop key="kr.co.opensns.hanta.common.exception.FileServiceException">common/error/notValidFileError</prop>
+                <prop key="org.apache.commons.fileupload.FileUploadBase$SizeLimitExceededException">common/error/notValidFileError</prop>
+            </props>
+        </property>
+        <property name="defaultErrorView" value="common/error/error"/>
+    </bean>
+</beans>

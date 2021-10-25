@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
+        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.3.xsd">
+
+    <util:properties id="resourceProperties" location="classpath:egovframework/properties/resource.properties" />
+    <util:properties id="globalsProperties" location="classpath:egovframework/properties/globals.properties" />
+    <!-- <util:properties id="g4cProperties" location="classpath:egovframework/properties/g4c.properties" /> -->
+    <util:properties id="msgProperties" location="classpath:egovframework/properties/msg.properties" />
+    <!-- <util:properties id="timeProperties" location="classpath:egovframework/properties/time.properties" /> -->
+</beans>

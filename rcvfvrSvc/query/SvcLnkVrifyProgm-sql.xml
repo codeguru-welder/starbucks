@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper SYSTEM "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="svcLnkVrifyProgm">
+
+<select id="selectSvcLnkVrifyProgmList" parameterType="kr.go.portal.rcvfvrSvc.main.vo.SvcLnkVrifyProgmVo" resultType="kr.go.portal.rcvfvrSvc.main.vo.SvcLnkVrifyProgmVo">
+	<![CDATA[
+	select distinct lnk_id, org_nm, lnk_nm, itm_nm, svc_id, qualf_ast_cd
+	    from
+	    (SELECT 
+	        '1' AS GBN, 
+	        LNK_ID, 
+	        ORG_NM, 
+	        LNK_NM, 
+	        NVL(AST_NM, ITM_EPL) AS ITM_NM, 
+	        SVC_ID, 
+	        QUALF_AST_CD 
+	    FROM 
+	        (
+	        SELECT  
+	            HOLD_ORG_CD, 
+	            ITM_EPL,
+	            (SELECT ORG_NM FROM TM_ADM_STD_ORG WHERE ORG_CD=A.HOLD_ORG_CD) AS ORG_NM,
+	            LNK_SVC_NM || '</br>(' || (A.LNK_ID) || ')' AS LNK_NM,
+	            A.LNK_ID,
+	            QUALF_AST_CD,
+	            B.SVC_ID,
+	            AST_NM
+	        FROM 
+	            TN_QUALF_INFO_LNK_INFO A, 
+	            TN_QUALF_LNK_META_INFO B, 
+	            TN_QUALF_AST_CD C
+	        WHERE 
+	            A.LNK_ID = B.LNK_ID 
+	            AND B.QUALF_AST_CD = C.AST_CD(+)
+	    --        AND B.CD_MAPNG_YN='Y'
+	            AND (QUALF_AST_CD IS NOT NULL OR SVC_ID IS NOT NULL))
+	    UNION ALL
+	        SELECT 
+	            '2' AS GBN, 
+	            INTRFC_ID, 
+	            (SELECT ORG_NM FROM TM_ADM_STD_ORG WHERE ORG_CD=(SELECT HOLD_ORG_CD FROM TN_QUALF_INFO_LNK_INFO WHERE LNK_ID=INTRFC_ID)) AS ORG_NM,
+	            (SELECT LNK_SVC_NM || '</br>(' || (INTRFC_ID) || ')'  FROM TN_QUALF_INFO_LNK_INFO AA WHERE AA.LNK_ID=INTRFC_ID) LNK_NM, 
+	            AST_NM, 
+	            '' SVC_ID, 
+	            AST_CD 
+	        FROM
+	            TN_QUALF_AST_CD 
+	        WHERE 
+	            INTRFC_ID NOT IN 
+	            (SELECT 
+	                A.LNK_ID
+	            FROM 
+	                TN_QUALF_INFO_LNK_INFO A, 
+	                TN_QUALF_LNK_META_INFO B, 
+	                TN_QUALF_AST_CD C
+	            WHERE A.LNK_ID = B.LNK_ID 
+	            AND B.QUALF_AST_CD = C.AST_CD(+)
+	            AND (QUALF_AST_CD IS NOT NULL OR SVC_ID IS NOT NULL))
+	            AND INTRFC_ID not in ('I-IF-MPVA-002','I-IF-MOHW-003')
+	            AND DEL_YN='N' AND USE_YN='Y'
+	            AND AST_CD NOT IN ('QA040109','QA040104')
+	    union all
+	  	SELECT DISTINCT GBN, INTRFC_ID, ORG_NM, LNK_NM, AST_NM, SVC_ID, QUALF_AST_CD
+		FROM
+		 (select distinct '2' as gbn, intrfc_id, 
+		    (select org_nm from TM_ADM_STD_ORG 
+		           where org_cd=(select HOLD_ORG_CD from TN_QUALF_INFO_LNK_INFO where lnk_id=intrfc_id)) as org_nm,  
+		           (SELECT LNK_SVC_NM || '</br>(' || (INTRFC_ID) || ')'  FROM TN_QUALF_INFO_LNK_INFO AA WHERE AA.LNK_ID=INTRFC_ID) LNK_NM,  
+		           ast_nm, '' svc_id, 
+		           AST_CD as qualf_ast_cd
+		           from TN_QUALF_AST_CD where  intrfc_id not in
+		    (select a.lnk_id
+		    FROM TN_QUALF_INFO_LNK_INFO a, TN_QUALF_LNK_META_INFO b, TN_QUALF_AST_CD c
+		    WHERE a.lnk_id = b.lnk_id
+		    AND b.qualf_ast_cd = c.ast_cd(+)
+		    and (qualf_ast_cd is not null or svc_id is not null))
+		    and intrfc_id ='I-IF-MPVA-002'
+		    --and length(ast_cd)=8 
+		    and (ast_nm like '%본인%') or (ast_nm like '%가족%') or (ast_nm like '%배우자%') or (ast_nm like '%부모%') or (ast_nm like '%자녀%')or (ast_nm like '%손자녀%')
+		    and del_yn='N' and use_yn='Y') WHERE  AST_NM LIKE '%(Y)'
+	    union all
+	    select distinct '2' as gbn, intrfc_id, 
+	    (select org_nm from TM_ADM_STD_ORG 
+	           where org_cd=(select HOLD_ORG_CD from TN_QUALF_INFO_LNK_INFO where lnk_id=intrfc_id)) as org_nm,
+	           (SELECT LNK_SVC_NM || '</br>(' || (INTRFC_ID) || ')'  FROM TN_QUALF_INFO_LNK_INFO AA WHERE AA.LNK_ID=INTRFC_ID) LNK_NM,  
+	           decode(substr(ast_cd,1,8),'QA020210', '전상군경_상이급수 ','QA020220', '공상군경_상이급수 ','QA020619', '재해부상군경 상이급수 ')|| ast_nm, 
+	           '' svc_id, 
+	           AST_CD 
+	           from TN_QUALF_AST_CD where intrfc_id not in
+	    (select a.lnk_id
+	    FROM TN_QUALF_INFO_LNK_INFO a, TN_QUALF_LNK_META_INFO b, TN_QUALF_AST_CD c
+	    WHERE a.lnk_id = b.lnk_id 
+	    AND b.qualf_ast_cd = c.ast_cd(+)
+	    and (qualf_ast_cd is not null or svc_id is not null)
+	    )
+	    and intrfc_id ='I-IF-MPVA-002'
+	    and ast_nm like '%급'
+	    --and qualf_ast_cd not in ('QA020215')
+	    and del_yn='N' and use_yn='Y'
+	    union all
+	    select distinct '2' as gbn, intrfc_id, 
+	    (select org_nm from TM_ADM_STD_ORG 
+	           where org_cd=(select HOLD_ORG_CD from TN_QUALF_INFO_LNK_INFO where lnk_id=intrfc_id)) as org_nm,
+	           (SELECT LNK_SVC_NM || '</br>(' || (INTRFC_ID) || ')'  FROM TN_QUALF_INFO_LNK_INFO AA WHERE AA.LNK_ID=INTRFC_ID) LNK_NM,  
+	           decode(substr(ast_cd,1,8),'QA020802', '주장애유형 ','QA020803', '주장애등급 ')||''|| ast_nm || '' as ast_nm, 
+	           '' svc_id, 
+	           AST_CD 
+	           from TN_QUALF_AST_CD where intrfc_id not in
+	    (select a.lnk_id
+	    FROM TN_QUALF_INFO_LNK_INFO a, TN_QUALF_LNK_META_INFO b, TN_QUALF_AST_CD c
+	    WHERE a.lnk_id = b.lnk_id 
+	    AND b.qualf_ast_cd = c.ast_cd(+)
+	    and (qualf_ast_cd is not null or svc_id is not null)
+	    )
+	    and intrfc_id ='I-IF-MOHW-003'
+	    and ast_cd not in ('QA020802', 'QA020803')
+	    and del_yn='N' and use_yn='Y')
+	    order by org_nm, lnk_nm, itm_nm
+
+	]]>
+</select>
+
+<insert id="insertSvcLnkVrifyProgm" parameterType="kr.go.portal.rcvfvrSvc.main.vo.SvcLnkVrifyProgmVo">
+	INSERT INTO TN_QUALF_INFO_REQUST_VRIFY
+	VALUES(
+		#{guidanceNo},
+		#{vrifySeq},
+		#{lnkId},
+		#{qualfAstCd},
+		#{svcId},
+		#{remark}
+	)
+	
+	<selectKey keyProperty="vrifySeq" resultType="int" order="BEFORE">
+		SELECT NVL(MAX(VRIFY_SEQ), 0) + 1 FROM TN_QUALF_INFO_REQUST_VRIFY WHERE CVPL_REQUST_GUIDANCE_NO = #{guidanceNo}
+	</selectKey> 
+</insert>
+</mapper>

@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper SYSTEM "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tnQualfInfoRequstRslt">
+
+	<!-- 자격 정보 요청 결과 리스트
+	I-IF-MPVA-002 인거 있는지.
+	-->
+	<select id="selectTnQualfInfoRequstRsltList" resultType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfInfoRequstRsltVo" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfInfoRequstRsltVo">
+		SELECT res_IV_nunber, subjKbnCd
+		  FROM (SELECT lnk_requst_no, lnk_id, lnk_list_seq
+		          FROM TN_QUALF_INFO_REQUST_RSLT
+		         WHERE     lnk_requst_no =  #{lnkRequstNo} /*인자값 교체*/
+		               AND lnk_id = 'I-IF-MPVA-002'
+		               AND qualf_itm_lnk_rslt = #{sendPersonName}) a,  /*인자값 교체*/
+		       (SELECT lnk_requst_no,
+		               lnk_id,
+		               lnk_list_seq,
+		               qualf_itm_lnk_rslt AS res_IV_nunber
+		          FROM TN_QUALF_INFO_REQUST_RSLT
+		         WHERE     lnk_requst_no =  #{lnkRequstNo} /*인자값 교체*/
+		               AND lnk_id = 'I-IF-MPVA-002'
+		               AND lnk_itm_nm = 'res_IV_nunber') b,
+		       (SELECT lnk_requst_no,
+		               lnk_id,
+		               lnk_list_seq,
+		               qualf_itm_lnk_rslt AS subjKbnCd
+		          FROM TN_QUALF_INFO_REQUST_RSLT
+		         WHERE     lnk_requst_no = #{lnkRequstNo} /*인자값 교체*/
+		               AND lnk_id = 'I-IF-MPVA-002'
+		               AND lnk_itm_nm = 'subjKbnCd') c
+		 WHERE     a.lnk_requst_no = b.lnk_requst_no
+		       AND a.lnk_id = b.lnk_id
+		       AND a.lnk_list_seq = b.lnk_list_seq
+		       AND a.lnk_requst_no = c.lnk_requst_no
+		       AND a.lnk_id = c.lnk_id
+		       AND a.lnk_list_seq = c.lnk_list_seq
+	</select>
+
+	<!-- 자격 정보 요청 결과 상세 뷰 -->
+	<select id="selectTnQualfInfoRequstRslt" resultType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfInfoRequstRsltVo">
+		SELECT
+			LNK_REQUST_NO
+			,LNK_ID
+			,LNK_LIST_SEQ
+			,LNK_ITM_NM
+			,QUALF_ITM_LNK_RSLT
+			,REQUST_SUCC_YN
+			,REQUST_ERR_CD_CTS
+			,LNK_PROCESS_DH
+		FROM	TN_QUALF_INFO_REQUST_RSLT
+		WHERE 1=1
+	</select>
+
+	<!-- 자격 정보 요청 결과 등록 -->
+	<insert id="insertTnQualfInfoRequstRslt" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfInfoRequstRsltVo">
+		INSERT INTO TN_QUALF_INFO_REQUST_RSLT (
+			LNK_REQUST_NO
+			,LNK_ID
+			,LNK_LIST_SEQ
+			,LNK_ITM_NM
+			,QUALF_ITM_LNK_RSLT
+			,REQUST_SUCC_YN
+			,REQUST_ERR_CD_CTS
+			,LNK_PROCESS_DH
+		) VALUES (
+			#{lnkRequstNo}
+			,#{lnkId}
+			,#{lnkListSeq}
+			,#{lnkItmNm}
+			,#{qualfItmLnkRslt}
+			,#{requstSuccYn}
+			,#{requstErrCdCts}
+			,#{lnkProcessDh}
+ 		)
+	</insert>
+
+	<!-- 자격 정보 요청 결과 수정 -->
+	<update id="updateTnQualfInfoRequstRslt" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfInfoRequstRsltVo">
+		UPDATE TN_QUALF_INFO_REQUST_RSLT SET
+			LNK_REQUST_NO = #{lnkRequstNo}
+			,LNK_ID = #{lnkId}
+			,LNK_LIST_SEQ = #{lnkListSeq}
+			,LNK_ITM_NM = #{lnkItmNm}
+			,QUALF_ITM_LNK_RSLT = #{qualfItmLnkRslt}
+			,REQUST_SUCC_YN = #{requstSuccYn}
+			,REQUST_ERR_CD_CTS = #{requstErrCdCts}
+			,LNK_PROCESS_DH = #{lnkProcessDh}
+ 		WHERE 1=1
+	</update>
+
+	<!-- 연계 요청후 처리된 건수 -->
+	<select id="selectTnQualfReciptInfoRequstRsltCnt" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfInfoRequstRsltVo" resultType="int">
+		select count(1) cnt from
+        ((SELECT lnk_requst_no, lnk_id
+          FROM TN_QUALF_RECIPT_INFO_REQUST
+         WHERE lnk_requst_no = #{lnkRequstNo})
+        MINUS
+        (SELECT DISTINCT b.lnk_requst_no, b.lnk_id
+          FROM TN_QUALF_RECIPT_INFO_REQUST a, TN_QUALF_INFO_REQUST_RSLT b
+         WHERE     a.lnk_requst_no = B.LNK_REQUST_NO
+               AND a.lnk_id = b.lnk_id
+               AND a.lnk_requst_no = #{lnkRequstNo}
+         union all
+           SELECT DISTINCT b.lnk_requst_no, b.lnk_id
+          FROM TN_QUALF_RECIPT_INFO_REQUST a, TN_QUALF_INFO_LIST_RSLT b
+         WHERE     a.lnk_requst_no = B.LNK_REQUST_NO
+               AND a.lnk_id = b.lnk_id
+               AND a.lnk_requst_no = #{lnkRequstNo}))
+	</select>
+
+	<!-- 보훈처 처리 건수 -->
+	<select id="selectTnQualfReciptInfoRequstRsltBhCnt" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfInfoRequstRsltVo" resultType="int">
+		 select count(*) from
+        ((SELECT lnk_requst_no, lnk_id
+          FROM TN_QUALF_RECIPT_INFO_REQUST
+         WHERE lnk_requst_no = #{lnkRequstNo})
+        MINUS
+        (SELECT DISTINCT b.lnk_requst_no, b.lnk_id
+          FROM TN_QUALF_RECIPT_INFO_REQUST a, TN_QUALF_INFO_REQUST_RSLT b
+         WHERE     a.lnk_requst_no = B.LNK_REQUST_NO
+               AND a.lnk_id = b.lnk_id
+               AND a.lnk_requst_no = #{lnkRequstNo}
+           ))
+	</select>
+
+	<!-- 연계 요청후 처리된 건수 sum -->
+	<select id="selectTnQualfReciptInfoRequstRsltSumCnt" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfInfoRequstRsltVo" resultType="int">
+		select count(1) cnt from
+        ((SELECT lnk_requst_no, lnk_id
+          FROM TN_QUALF_RECIPT_INFO_REQUST
+         WHERE 1=1
+         AND CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo}
+		 )
+        MINUS
+        (SELECT DISTINCT b.lnk_requst_no, b.lnk_id
+          FROM TN_QUALF_RECIPT_INFO_REQUST a, TN_QUALF_INFO_REQUST_RSLT b
+         WHERE     a.lnk_requst_no = B.LNK_REQUST_NO
+               AND a.lnk_id = b.lnk_id
+               AND A.CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo}
+         union all
+           SELECT DISTINCT b.lnk_requst_no, b.lnk_id
+          FROM TN_QUALF_RECIPT_INFO_REQUST a, TN_QUALF_INFO_LIST_RSLT b
+         WHERE     a.lnk_requst_no = B.LNK_REQUST_NO
+               AND a.lnk_id = b.lnk_id
+               AND A.CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo}
+               ))
+	</select>
+
+	<!-- 보훈처 처리 건수 합계 -->
+	<select id="selectTnQualfReciptInfoRequstRsltBhSumCnt" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfInfoRequstRsltVo" resultType="int">
+		 select count(*) from
+        ((SELECT lnk_requst_no, lnk_id
+          FROM TN_QUALF_RECIPT_INFO_REQUST
+         WHERE 1=1
+         AND CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo}
+         )
+        MINUS
+        (SELECT DISTINCT b.lnk_requst_no, b.lnk_id
+          FROM TN_QUALF_RECIPT_INFO_REQUST a, TN_QUALF_INFO_REQUST_RSLT b
+         WHERE     a.lnk_requst_no = B.LNK_REQUST_NO
+               AND a.lnk_id = b.lnk_id
+               AND a.CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo}
+               union all
+           SELECT DISTINCT b.lnk_requst_no, b.lnk_id
+          FROM TN_QUALF_RECIPT_INFO_REQUST a, TN_QUALF_INFO_LIST_RSLT b
+         WHERE     a.lnk_requst_no = B.LNK_REQUST_NO
+               AND a.lnk_id = b.lnk_id
+               AND A.CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo}
+           ))
+	</select>
+
+</mapper>

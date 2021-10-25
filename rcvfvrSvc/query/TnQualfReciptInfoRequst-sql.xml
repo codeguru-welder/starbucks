@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper SYSTEM "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tnQualfReciptInfoRequst">
+
+	<!-- 자격 수급 정보 요청 리스트 -->
+	<select id="selectTnQualfReciptInfoRequstList" resultType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfReciptInfoRequstVo">
+		SELECT
+			LNK_REQUST_NO
+			,CVPL_REQUST_GUIDANCE_NO
+			,CPTTR_SEQ
+			,AGREUSR_SEQ
+			,REQUST_SUCC_YN
+			,REQUST_ERR_CD_CTS
+		FROM	TN_QUALF_RECIPT_INFO_REQUST
+		WHERE 1=1
+	</select>
+
+	<!-- 자격 수급 정보 요청 상세 뷰 -->
+	<select id="selectTnQualfReciptInfoRequst" resultType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfReciptInfoRequstVo">
+		SELECT
+			LNK_REQUST_NO
+			,CVPL_REQUST_GUIDANCE_NO
+			,CPTTR_SEQ
+			,AGREUSR_SEQ
+			,REQUST_SUCC_YN
+			,REQUST_ERR_CD_CTS
+		FROM	TN_QUALF_RECIPT_INFO_REQUST
+		WHERE 1=1
+		AND CVPL_REQUST_GUIDANCE_NO = #{cvplRequstGuidanceNo}
+	</select>
+
+	<!-- 자격 수급 정보 요청 등록 -->
+	<insert id="insertTnQualfReciptInfoRequst" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfReciptInfoRequstVo">
+		INSERT INTO TN_QUALF_RECIPT_INFO_REQUST (
+			LNK_REQUST_NO
+			,LNK_ID
+			,CVPL_REQUST_GUIDANCE_NO
+			,CPTTR_SEQ
+			,AGREUSR_SEQ
+		) VALUES (
+			#{lnkRequstNo}
+			,#{lnkId}
+			,#{cvplRequstGuidanceNo}
+			,#{cpttrSeq}
+			,#{agreusrSeq}
+ 		)
+	</insert>
+
+	<!-- 자격 수급 정보 요청 등록 select insert -->
+	<insert id="insertTnQualfReciptInfoRequstSelect" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfReciptInfoRequstVo">
+	
+		INSERT INTO TN_QUALF_RECIPT_INFO_REQUST (
+			LNK_REQUST_NO
+			,LNK_ID
+			,CVPL_REQUST_GUIDANCE_NO
+			,CPTTR_SEQ
+			,AGREUSR_SEQ
+		)
+		<choose>
+			<when test='linkId != null'>
+				SELECT
+		            #{lnkRequstNo}
+		            ,'I-IF-SCOURT-001'
+		            ,#{cvplRequstGuidanceNo}
+					,#{cpttrSeq}
+					,#{agreusrSeq}
+				FROM 
+					DUAL 
+				UNION ALL
+				SELECT
+		            #{lnkRequstNo}
+		            ,'I-IF-MOIS-007'
+		            ,#{cvplRequstGuidanceNo}
+					,#{cpttrSeq}
+					,#{agreusrSeq}
+				FROM 
+					DUAL
+			</when>
+			<otherwise>
+			<![CDATA[
+				SELECT
+		             #{lnkRequstNo}
+		            ,A.LNK_ID
+		            ,#{cvplRequstGuidanceNo}
+					,#{cpttrSeq}
+					,#{agreusrSeq}
+		        FROM TN_QUALF_INFO_LNK_INFO a, TN_USR_CLSACCTO_LNK_INFO b
+				 WHERE     a.LNK_ID = b.LNK_ID
+				       AND A.USE_YN = 'Y'
+				       AND b.use_YN = 'Y'
+				       AND b.USR_SEX_CD = #{usrSexCd}
+				       AND A.LNK_ID <> 'I-IF-MPVA-005'  /*I-IF-MPVA-005 이거는 연계후 보훈처에 다시 보내야 되는 내용이 있을경우에만 따로 보냄.*/
+				       AND b.USR_AGE_CD =
+				              (SELECT CASE
+				                         WHEN MANAGE < 10 THEN 'DA1301'
+				                         WHEN MANAGE < 20 THEN 'DA1302'
+				                         WHEN MANAGE < 30 THEN 'DA1303'
+				                         WHEN MANAGE < 40 THEN 'DA1304'
+				                         WHEN MANAGE < 50 THEN 'DA1305'
+				                         WHEN MANAGE < 60 THEN 'DA1306'
+				                         ELSE 'DA1307'
+				                      END
+				                         AS AGECODE
+				                 FROM (SELECT TRUNC (MONTHS_BETWEEN (TRUNC(SYSDATE), TO_DATE (#{cpttrBrthdy}, 'yyyymmdd'))/ 12) MANAGE FROM DUAL))
+						AND A.LNK_ID IN (SELECT LNK_ID FROM TN_LNK_REQUST_ITM_INFO )
+						AND A.LNK_ID NOT IN ('I-IF-SCOURT-001', 'I-IF-MOIS-007')
+				]]>
+			</otherwise>
+		</choose>
+	</insert>
+
+	<!-- 자격 수급 정보 요청 수정 -->
+	<update id="updateTnQualfReciptInfoRequst" parameterType="kr.go.portal.rcvfvrSvc.lnkSvc.vo.TnQualfReciptInfoRequstVo">
+		UPDATE TN_QUALF_RECIPT_INFO_REQUST SET
+			REQUST_SUCC_YN = #{requstSuccYn}
+			,REQUST_ERR_CD_CTS = #{requstErrCdCts}
+ 		WHERE 1=1
+ 		AND LNK_REQUST_NO = #{lnkRequstNo}
+	</update>
+
+</mapper>
